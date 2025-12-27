@@ -1,0 +1,5 @@
+[submodule "third_party/diffusion_policy"]
+	path = third_party/diffusion_policy
+	url = https://github.com/mmurooka/diffusion_policy.git
+	branch = robomanipbaselines
+	ignore = untracked
