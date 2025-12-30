@@ -37,10 +37,14 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
         obs_encoder_group_norm=False,
         eval_fixed_crop=False,
         tactile_feature_dim=64,
+        tactile_kwargs=None,
         # parameters passed to step
         **kwargs,
     ):
         super().__init__()
+
+        if tactile_kwargs is None:
+            tactile_kwargs = {}
 
         if not obs_as_global_cond:
             raise ValueError(
@@ -56,10 +60,12 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
         obs_key_shapes = dict()
         self.tactile_keys = []
         for key, attr in obs_shape_meta.items():
-            shape = attr["shape"]
-            obs_key_shapes[key] = list(shape)
-
             type = attr.get("type", "low_dim")
+
+            if type != "tactile":
+                shape = attr["shape"]
+                obs_key_shapes[key] = list(shape)
+
             if type == "rgb":
                 obs_config["rgb"].append(key)
             elif type == "low_dim":
@@ -128,7 +134,7 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
             )
 
         # setup tactile encoder
-        self.setup_tactile_encoder(output_dim=tactile_feature_dim)
+        self.setup_tactile_encoder(output_dim=tactile_feature_dim, **tactile_kwargs)
 
         # create diffusion model
         obs_feature_dim = (
@@ -258,7 +264,9 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
             nobs_features = self.obs_encoder(this_nobs_without_tactile)
             tactile_features_list = []
             for tactile_image in tactile_obs.values():
-                tactile_features_list.append(self.calc_tactile_feature(tactile_image))
+                tactile_features_list.append(
+                    self.forward_tactile_encoder(tactile_image)
+                )
             tactile_features = torch.cat(tactile_features_list, dim=1)
             # reshape back to B, Do
             global_cond = torch.cat(
@@ -317,7 +325,9 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
             nobs_features = self.obs_encoder(this_nobs_without_tactile)
             tactile_features_list = []
             for tactile_image in tactile_obs.values():
-                tactile_features_list.append(self.calc_tactile_feature(tactile_image))
+                tactile_features_list.append(
+                    self.forward_tactile_encoder(tactile_image)
+                )
             tactile_features = torch.cat(tactile_features_list, dim=1)
             # reshape back to B, Do
             global_cond = torch.cat(
@@ -375,9 +385,9 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
         return loss
 
     @abstractmethod
-    def setup_tactile_encoder(self):
+    def setup_tactile_encoder(self, **tactile_kwargs):
         pass
 
     @abstractmethod
-    def calc_tactile_feature(self, tactile_image):
+    def forward_tactile_encoder(self, tactile_image):
         pass
