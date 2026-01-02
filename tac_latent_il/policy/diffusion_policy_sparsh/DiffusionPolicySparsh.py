@@ -12,7 +12,11 @@ from tac_latent_il.common import DiffusionPolicyTactileBase
 
 class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
     def setup_tactile_encoder(
-        self, output_dim=64, checkpoint=None, encoder_type="dino"
+        self,
+        output_dim=64,
+        encoder_type="dino",
+        enable_finetune=False,
+        load_checkpoint=True,
     ):
         self.sparsh_model = vit_base(
             in_chans=6, pos_embed_fn="sinusoidal", num_register_tokens=1
@@ -21,8 +25,19 @@ class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
         embed_dim = self.atten_pooler.query_tokens.shape[-1]
         self.linear = torch.nn.Linear(embed_dim, output_dim)
 
-        if checkpoint is not None:
-            checkpoint_data = torch.load(checkpoint, weights_only=False)
+        if load_checkpoint:
+            checkpoint_path = os.path.normpath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    f"../../checkpoint/Sparsh/{encoder_type}_vitbase.ckpt",
+                )
+            )
+            checkpoint_data = torch.load(
+                checkpoint_path, map_location="cpu", weights_only=False
+            )
+            print(
+                f"[{self.__class__.__name__}] Load Sparsh checkpoint: {checkpoint_path}"
+            )
             if "jepa" in encoder_type:
                 encoder_key = "target_encoder"
             elif "dino" in encoder_type:
@@ -40,6 +55,14 @@ class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
                 for new_key, target_key in zip(new_keys, target_keys)
             }
             self.sparsh_model.load_state_dict(new_state_dict, strict=False)
+
+        if enable_finetune:
+            print(f"[{self.__class__.__name__}] Fine-tune sparsh model.")
+        else:
+            print(f"[{self.__class__.__name__}] Freeze sparsh model.")
+            for p in self.sparsh_model.parameters():
+                p.requires_grad = False
+            self.sparsh_model.eval()
 
     def forward_tactile_encoder(self, tactile_image):
         sparsh_output = self.sparsh_model(tactile_image)

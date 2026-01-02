@@ -261,7 +261,7 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
         # Construct optimizer
         if self.args.backbone == "cnn":
             self.optimizer = torch.optim.AdamW(
-                self.policy.parameters(),
+                (p for p in self.policy.parameters() if p.requires_grad),
                 lr=self.args.lr,
                 weight_decay=self.args.weight_decay,
                 betas=(0.95, 0.999),

@@ -1,5 +1,3 @@
-import os
-
 from tac_latent_il.common import TrainDiffusionPolicyTactileBase
 
 from .DiffusionPolicySparsh import DiffusionPolicySparsh
@@ -12,18 +10,17 @@ class TrainDiffusionPolicySparsh(TrainDiffusionPolicyTactileBase):
 
     def set_additional_args_for_tactile(self, parser):
         parser.add_argument(
-            "--sparsh_checkpoint",
-            type=str,
-            default=None,
-            help="sparsh pretrained checkpoint",
-        )
-
-        parser.add_argument(
             "--sparsh_encoder_type",
             type=str,
             default="dino",
             choices=["mae", "dino", "dinov2", "ijepa"],
             help="sparsh encoder type",
+        )
+
+        parser.add_argument(
+            "--enable_tactile_finetune",
+            action="store_true",
+            help="whether to fine-tune sparsh model",
         )
 
     def setup_model_meta_info_for_tactile(self):
@@ -32,17 +29,12 @@ class TrainDiffusionPolicySparsh(TrainDiffusionPolicyTactileBase):
         )
 
     def print_policy_info_for_tactile(self):
-        sparsh_checkpoint_str = (
-            os.path.basename(self.args.sparsh_checkpoint)
-            if isinstance(self.args.sparsh_checkpoint, str)
-            else "None"
-        )
         print(
-            f"  - sparsh checkpoint: {sparsh_checkpoint_str}, sparsh type: {self.args.sparsh_encoder_type}"
+            f"  - sparsh type: {self.args.sparsh_encoder_type}, fine-tune sparsh: {self.args.enable_tactile_finetune}"
         )
 
     def get_tactile_kwargs(self):
         return {
-            "checkpoint": self.args.sparsh_checkpoint,
             "encoder_type": self.args.sparsh_encoder_type,
+            "enable_finetune": self.args.enable_tactile_finetune,
         }
