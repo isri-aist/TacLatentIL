@@ -29,6 +29,17 @@ $ cd third_party/sparsh
 $ pip install -e .
 ```
 
+## Download Sparsh pretrained models
+Download the Sparsh pretrained models:
+```console
+# Go to the top directory of this repository
+$ cd tac_latent_il/checkpoint/Sparsh
+$ wget -O mae_vitbase.ckpt https://huggingface.co/facebook/sparsh-mae-base/resolve/main/mae_vitbase.ckpt?download=true
+$ wget -O dino_vitbase.ckpt https://huggingface.co/facebook/sparsh-dino-base/resolve/main/dino_vitbase.ckpt?download=true
+$ wget -O dinov2_vitbase.ckpt https://huggingface.co/facebook/sparsh-dinov2-base/resolve/main/dinov2_vitbase.ckpt?download=true
+$ wget -O ijepa_vitbase.ckpt https://huggingface.co/facebook/sparsh-ijepa-base/resolve/main/ijepa_vitbase.ckpt?download=true
+```
+
 ## Model training
 Train a model:
 ```console
