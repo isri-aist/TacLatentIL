@@ -57,9 +57,9 @@ class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
             self.sparsh_model.load_state_dict(new_state_dict, strict=False)
 
         if enable_finetune:
-            print(f"[{self.__class__.__name__}] Fine-tune sparsh model.")
+            print(f"[{self.__class__.__name__}] Fine-tune Sparsh model.")
         else:
-            print(f"[{self.__class__.__name__}] Freeze sparsh model.")
+            print(f"[{self.__class__.__name__}] Freeze Sparsh model.")
             for p in self.sparsh_model.parameters():
                 p.requires_grad = False
             self.sparsh_model.eval()
