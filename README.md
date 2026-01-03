@@ -18,3 +18,9 @@ $ pip install -e .
 > $ ls <workspace_dir>
 > RoboManipBaselines  TacLatentIL
 > ```
+
+### Install for each policy
+Please refer to the README of each policy listed below.
+
+## Policies
+- **[DiffusionPolicySparsh](./tac_latent_il/policy/diffusion_policy_sparsh)**: Diffusion policy with Sparsh tactile encoder

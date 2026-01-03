@@ -16,5 +16,15 @@ requires-python = ">= 3.8"
 dependencies = []
 dynamic = ["version"]
 
+[project.optional-dependencies]
+sparsh = [
+  "lightning",
+  "xformers",
+  "safetensors",
+  "scikit-learn",
+  "rich",
+  "digit-interface",
+]
+
 [tool.setuptools.packages.find]
 include = ["tac_latent_il", "tac_latent_il.*"]
