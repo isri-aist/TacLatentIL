@@ -3,3 +3,8 @@
 	url = https://github.com/mmurooka/diffusion_policy.git
 	branch = robomanipbaselines
 	ignore = untracked
+[submodule "third_party/sparsh"]
+	path = third_party/sparsh
+	url = https://github.com/mmurooka/sparsh.git
+	branch = robomanipbaselines
+	ignore = untracked
