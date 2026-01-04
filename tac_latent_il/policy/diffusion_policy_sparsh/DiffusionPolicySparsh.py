@@ -36,7 +36,7 @@ class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
                 checkpoint_path, map_location="cpu", weights_only=False
             )
             print(
-                f"[{self.__class__.__name__}] Load Sparsh checkpoint: {checkpoint_path}"
+                f"[{self.__class__.__name__}] Load Sparsh pretrain checkpoint: {checkpoint_path}"
             )
             if "jepa" in encoder_type:
                 encoder_key = "target_encoder"
@@ -55,6 +55,10 @@ class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
                 for new_key, target_key in zip(new_keys, target_keys)
             }
             self.sparsh_model.load_state_dict(new_state_dict, strict=False)
+        else:
+            print(
+                f"[{self.__class__.__name__}] Skip loading Sparsh pretrained checkpoint."
+            )
 
         if enable_finetune:
             print(f"[{self.__class__.__name__}] Fine-tune Sparsh model.")

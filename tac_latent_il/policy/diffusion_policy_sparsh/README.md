@@ -29,7 +29,7 @@ $ cd third_party/sparsh
 $ pip install -e .
 ```
 
-## Download Sparsh pretrained models
+## Download (required only for training)
 Download the Sparsh pretrained models:
 ```console
 # Go to the top directory of this repository
@@ -63,5 +63,5 @@ Run a trained policy:
 ```console
 # Go to the top directory of this repository
 $ cd guided_attention
-$ python ./bin/Rollout.py DiffusionPolicySparsh MujocoUR5eCable --checkpoint ./checkpoint/DiffusionPolicySparsh/<checkpoint_name>/policy_last.ckpt
+$ python ./bin/Rollout.py DiffusionPolicySparsh RealUR5eDemo --checkpoint ./checkpoint/DiffusionPolicySparsh/<checkpoint_name>/policy_last.ckpt
 ```

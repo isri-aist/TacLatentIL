@@ -85,33 +85,22 @@ class DiffusionPolicySparshDataset(DatasetBase, DpStyleDatasetMixin):
         ).reshape(K, T, *image_size[::-1], C)
 
         # Process tactiles
-        def _process_tactile_cv2(img):
-            img = cv2.resize(img, (224, 224))
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            img = cv2.flip(img, 0)
-            img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-            return img
-
         tactiles_tensor_dict = {}
         for tactile_name in self.model_meta_info["tactile"]["tactile_names"]:
-            init_tactile_proc = _process_tactile_cv2(init_tactile_dict[tactile_name])
+            init_tactile = self.process_tactile_cv2(init_tactile_dict[tactile_name])
             tactiles = tactiles_dict[tactile_name]
             proc_list0 = []
             for proc_idx0 in range(tactiles.shape[0]):
                 proc_list1 = []
                 for proc_idx1 in range(tactiles.shape[1]):
-                    tactile_proc = _process_tactile_cv2(tactiles[proc_idx0, proc_idx1])
-                    tactile_proc = compute_diff(
-                        tactile_proc, init_tactile_proc, offset=0.5
-                    )
-                    tactile_proc = enhance_image(
-                        tactile_proc, brightness=280, contrast=200
-                    )
-                    tactile_proc = np.ascontiguousarray(
-                        np.moveaxis(tactile_proc, -1, -3)
+                    tactile = self.process_tactile_cv2(tactiles[proc_idx0, proc_idx1])
+                    tactile = compute_diff(tactile, init_tactile, offset=0.5)
+                    tactile = enhance_image(tactile, brightness=280, contrast=200)
+                    tactile = np.ascontiguousarray(
+                        np.moveaxis(tactile, -1, -3)
                     )  # (C, H, W)
-                    tactile_proc = torch.from_numpy(tactile_proc).float().div(255.0)
-                    proc_list1.append(tactile_proc)
+                    tactile = torch.from_numpy(tactile).float().div(255.0)
+                    proc_list1.append(tactile)
                 proc_list0.append(torch.cat(proc_list1, dim=0))  # (2 * C, H, W)
             tactiles_tensor_dict[tactile_name] = torch.stack(
                 proc_list0, dim=0
@@ -152,3 +141,10 @@ class DiffusionPolicySparshDataset(DatasetBase, DpStyleDatasetMixin):
         images = images * 2.0 - 1.0
 
         return state, action, images
+
+    def process_tactile_cv2(self, img):
+        img = cv2.resize(img, (224, 224))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.flip(img, 0)
+        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+        return img
