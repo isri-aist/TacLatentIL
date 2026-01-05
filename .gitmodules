@@ -8,3 +8,6 @@
 	url = https://github.com/mmurooka/sparsh.git
 	branch = robomanipbaselines
 	ignore = untracked
+[submodule "third_party/any_touch"]
+	path = third_party/any_touch
+	url = https://github.com/GeWu-Lab/AnyTouch.git

@@ -5,6 +5,7 @@ class TrainMainTLIL(TrainMain):
     policy_parent_module_str = "tac_latent_il.policy"
     policy_choices = [
         "DiffusionPolicySparsh",
+        "DiffusionPolicyAnyTouch",
     ]
 
 
