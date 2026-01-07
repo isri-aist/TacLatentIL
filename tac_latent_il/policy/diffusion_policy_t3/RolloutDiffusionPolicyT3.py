@@ -5,6 +5,7 @@ from robo_manip_baselines.common import (
     DataKey,
     denormalize_data,
 )
+from torchvision.transforms import v2
 
 from tac_latent_il.common import RolloutDiffusionPolicyTactileBase
 
@@ -14,10 +15,26 @@ from .DiffusionPolicyT3 import DiffusionPolicyT3
 class RolloutDiffusionPolicyT3(RolloutDiffusionPolicyTactileBase):
     PolicyClass = DiffusionPolicyT3
 
+    def setup_variables(self):
+        super().setup_variables()
+
+        tactile_transform_list = []
+
+        tactile_transform_list.append(v2.ToDtype(torch.float32, scale=True))
+
+        # mean and std are copied from
+        # https://github.com/alanzjl/t3/blob/341177f232df3b824a5246b0d1855cd9e4d2cf29/configs/datasets/eval_ds_cls_mini.yaml#L17-L19
+        tactile_transform_list.append(
+            v2.Normalize(
+                mean=[0.02172, 0.04152, 0.04152], std=[0.10158, 0.14423, 0.12185]
+            )
+        )
+
+        self.tactile_transforms = v2.Compose(tactile_transform_list)
+
     def reset_variables(self):
         super().reset_variables()
 
-        self.init_tactile_dict = {}
         self.tactiles_buf = None
 
     def infer_policy(self):
@@ -54,13 +71,11 @@ class RolloutDiffusionPolicyT3(RolloutDiffusionPolicyTactileBase):
         for tactile_name in self.tactile_names:
             tactile = self.info["rgb_images"][tactile_name]
 
-            tactile = self.process_tactile_cv2(tactile)
+            tactile = cv2.resize(tactile, (224, 224))
 
-            if tactile_name not in self.init_tactile_dict:
-                self.init_tactile_dict[tactile_name] = tactile.copy()
-
-            tactile = np.ascontiguousarray(np.moveaxis(tactile, -1, -3))
-            tactile = torch.from_numpy(tactile).float().div(255.0)
+            tactile = np.moveaxis(tactile, -1, -3)
+            tactile = torch.tensor(tactile, dtype=torch.uint8)
+            tactile = self.tactile_transforms(tactile)
 
             tactiles.append(tactile)
 
@@ -78,19 +93,10 @@ class RolloutDiffusionPolicyT3(RolloutDiffusionPolicyTactileBase):
                 single_tactiles_buf.append(tactile)
 
     def get_tactiles(self):
-        tactiles = []
-        for single_tactiles_buf in self.tactiles_buf:
-            current_tactile_buf = torch.stack(single_tactiles_buf, dim=0)
-            tactiles.append(current_tactile_buf[torch.newaxis].to(self.device))
-
-        return tactiles
-
-    def process_tactile_cv2(self, img):
-        img = cv2.resize(img, (224, 224))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = cv2.flip(img, 0)
-        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-        return img
+        return [
+            torch.stack(single_tactiles_buf, dim=0)[torch.newaxis].to(self.device)
+            for single_tactiles_buf in self.tactiles_buf
+        ]
 
     def print_policy_info_for_tactile(self):
         tactile_kwargs = self.model_meta_info["policy"]["args"]["tactile_kwargs"]

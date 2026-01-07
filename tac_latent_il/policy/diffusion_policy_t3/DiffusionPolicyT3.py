@@ -50,7 +50,7 @@ class DiffusionPolicyT3(DiffusionPolicyTactileBase):
                 )
             )
             print(
-                f"[{self.__class__.__name__}] Load T3 encoder pretrain checkpoint: {trunk_checkpoint_path}"
+                f"[{self.__class__.__name__}] Load T3 trunk pretrain checkpoint: {trunk_checkpoint_path}"
             )
             self.t3_trunk.load(trunk_checkpoint_path)
         else:
