@@ -68,7 +68,7 @@ class RolloutDiffusionPolicyT3(RolloutDiffusionPolicyTactileBase):
             self.tactiles_buf = [
                 [
                     tactile.clone()
-                    for _ in range(self.model_meta_info["data"]["n_obs_steps"] + 1)
+                    for _ in range(self.model_meta_info["data"]["n_obs_steps"])
                 ]
                 for tactile in tactiles
             ]
@@ -80,12 +80,8 @@ class RolloutDiffusionPolicyT3(RolloutDiffusionPolicyTactileBase):
     def get_tactiles(self):
         tactiles = []
         for single_tactiles_buf in self.tactiles_buf:
-            current_tactile_buf = torch.stack(single_tactiles_buf[1:], dim=0)
-            prev_tactile_buf = torch.stack(single_tactiles_buf[:-1], dim=0)
-            combined_tactile_buf = torch.cat(
-                [current_tactile_buf, prev_tactile_buf], dim=1
-            )
-            tactiles.append(combined_tactile_buf[torch.newaxis].to(self.device))
+            current_tactile_buf = torch.stack(single_tactiles_buf, dim=0)
+            tactiles.append(current_tactile_buf[torch.newaxis].to(self.device))
 
         return tactiles
 
