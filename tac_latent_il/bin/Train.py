@@ -6,6 +6,7 @@ class TrainMainTLIL(TrainMain):
     policy_choices = [
         "DiffusionPolicySparsh",
         "DiffusionPolicyT3",
+        "DiffusionPolicyAnyTouch",
     ]
 
 

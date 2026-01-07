@@ -7,6 +7,7 @@ class RolloutMainTLIL(RolloutMain):
     policy_choices = [
         "DiffusionPolicySparsh",
         "DiffusionPolicyT3",
+        "DiffusionPolicyAnyTouch",
     ]
 
 

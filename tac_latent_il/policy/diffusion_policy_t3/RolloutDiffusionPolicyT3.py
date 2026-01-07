@@ -81,10 +81,7 @@ class RolloutDiffusionPolicyT3(RolloutDiffusionPolicyTactileBase):
 
         if self.tactiles_buf is None:
             self.tactiles_buf = [
-                [
-                    tactile.clone()
-                    for _ in range(self.model_meta_info["data"]["n_obs_steps"])
-                ]
+                [tactile for _ in range(self.model_meta_info["data"]["n_obs_steps"])]
                 for tactile in tactiles
             ]
         else:
