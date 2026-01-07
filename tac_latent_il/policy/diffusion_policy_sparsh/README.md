@@ -62,6 +62,6 @@ $ python ./bin/Train.py DiffusionPolicySparsh --dataset_dir ./dataset/<dataset_n
 Run a trained policy:
 ```console
 # Go to the top directory of this repository
-$ cd guided_attention
+$ cd tac_latent_il
 $ python ./bin/Rollout.py DiffusionPolicySparsh RealUR5eDemo --checkpoint ./checkpoint/DiffusionPolicySparsh/<checkpoint_name>/policy_last.ckpt
 ```

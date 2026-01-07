@@ -1,4 +1,4 @@
-# Diffusion Policy with Sparsh Tactile Encoder
+# Diffusion Policy with T3 Tactile Encoder
 
 ## Install
 Install RoboManipBaselines:
@@ -30,7 +30,7 @@ $ pip install -e .
 ```
 
 ## Download (required only for training)
-Download the Sparsh pretrained models:
+Download the T3 pretrained models:
 ```console
 # Go to the top directory of this repository
 $ cd tac_latent_il/checkpoint/T3

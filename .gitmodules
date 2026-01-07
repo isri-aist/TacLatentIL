@@ -11,3 +11,4 @@
 [submodule "third_party/t3"]
 	path = third_party/t3
 	url = https://github.com/alanzjl/t3.git
+	ignore = untracked

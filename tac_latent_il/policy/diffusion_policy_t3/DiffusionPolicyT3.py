@@ -18,32 +18,41 @@ class DiffusionPolicyT3(DiffusionPolicyTactileBase):
         enable_finetune=False,
         load_checkpoint=True,
     ):
-        self.t3_encoder = ViTEncoder(embed_dim=192, num_heads=3, mlp_ratio=4.0, depth=3)
-        self.trunk = TransformerTrunk(
-            embed_dim=192,
+        embed_dim = 192
+        self.t3_encoder = ViTEncoder(
+            patch_size=16, embed_dim=embed_dim, depth=3, num_heads=3, mlp_ratio=4.0
+        )
+        self.t3_trunk = TransformerTrunk(
+            embed_dim=embed_dim,
             depth=9,
             num_heads=3,
             mlp_ratio=4.0,
             pooling_type=pooling_type,
         )
-        embed_dim = 192
         self.linear = torch.nn.Linear(embed_dim, output_dim)
 
         if load_checkpoint:
-            checkpoint_path = os.path.normpath(
+            encoder_checkpoint_path = os.path.normpath(
                 os.path.join(
                     os.path.dirname(__file__),
                     "../../checkpoint/T3/mini.pth",
                 )
             )
-            self.t3_encoder.load(checkpoint_path)
-            trunk_path = os.path.normpath(
+            print(
+                f"[{self.__class__.__name__}] Load T3 encoder pretrain checkpoint: {encoder_checkpoint_path}"
+            )
+            self.t3_encoder.load(encoder_checkpoint_path)
+
+            trunk_checkpoint_path = os.path.normpath(
                 os.path.join(
                     os.path.dirname(__file__),
                     "../../checkpoint/T3/trunk.pth",
                 )
             )
-            self.trunk.load(trunk_path)
+            print(
+                f"[{self.__class__.__name__}] Load T3 encoder pretrain checkpoint: {trunk_checkpoint_path}"
+            )
+            self.t3_trunk.load(trunk_checkpoint_path)
         else:
             print(f"[{self.__class__.__name__}] Skip loading T3 pretrained checkpoint.")
 
@@ -54,8 +63,11 @@ class DiffusionPolicyT3(DiffusionPolicyTactileBase):
             for p in self.t3_encoder.parameters():
                 p.requires_grad = False
             self.t3_encoder.eval()
+            for p in self.t3_trunk.parameters():
+                p.requires_grad = False
+            self.t3_trunk.eval()
 
     def forward_tactile_encoder(self, tactile_image):
-        t3_output = self.t3_encoder(tactile_image)
-        tactile_feature = self.linear(self.trunk(t3_output))
+        t3_output = self.t3_trunk(self.t3_encoder(tactile_image))
+        tactile_feature = self.linear(t3_output)
         return tactile_feature

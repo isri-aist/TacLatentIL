@@ -1,6 +1,3 @@
-import os
-import sys
-
 import cv2
 import numpy as np
 import torch
@@ -11,12 +8,28 @@ from robo_manip_baselines.common import (
     RmbData,
     get_skipped_data_seq,
 )
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "../../../third_party/t3"))
+from torchvision.transforms import v2
 
 
 class DiffusionPolicyT3Dataset(DatasetBase, DpStyleDatasetMixin):
     """Dataset to train diffusion policy t3."""
+
+    def setup_image_transforms(self):
+        super().setup_image_transforms()
+
+        tactile_transform_list = []
+
+        tactile_transform_list.append(v2.ToDtype(torch.float32, scale=True))
+
+        # mean and std are copied from
+        # https://github.com/alanzjl/t3/blob/341177f232df3b824a5246b0d1855cd9e4d2cf29/configs/datasets/eval_ds_cls_mini.yaml#L17-L19
+        tactile_transform_list.append(
+            v2.Normalize(
+                mean=[0.02172, 0.04152, 0.04152], std=[0.10158, 0.14423, 0.12185]
+            )
+        )
+
+        self.tactile_transforms = v2.Compose(tactile_transform_list)
 
     def setup_variables(self):
         self.setup_dp_style_chunk()
@@ -66,10 +79,15 @@ class DiffusionPolicyT3Dataset(DatasetBase, DpStyleDatasetMixin):
             )
 
             # Load tactiles
-            tactiles_dict = {}
-            for tactile_name in self.model_meta_info["tactile"]["tactile_names"]:
-                tactile_data = rmb_data[DataKey.get_rgb_image_key(tactile_name)][::skip]
-                tactiles_dict[tactile_name] = tactile_data[time_idxes]  # (T, H, W, C)
+            tactiles = np.stack(
+                [
+                    rmb_data[DataKey.get_rgb_image_key(tactile_name)][::skip][
+                        time_idxes
+                    ]
+                    for tactile_name in self.model_meta_info["tactile"]["tactile_names"]
+                ],
+                axis=0,
+            )
 
         # Resize images
         K, T, H, W, C = images.shape
@@ -78,34 +96,28 @@ class DiffusionPolicyT3Dataset(DatasetBase, DpStyleDatasetMixin):
             [cv2.resize(img, image_size) for img in images.reshape(-1, H, W, C)]
         ).reshape(K, T, *image_size[::-1], C)
 
-        # Process tactiles
-        tactiles_tensor_dict = {}
-        for tactile_name in self.model_meta_info["tactile"]["tactile_names"]:
-            tactiles = tactiles_dict[tactile_name]
-            proc_list0 = []
-            for proc_idx0 in range(tactiles.shape[0]):
-                tactile = self.process_tactile_cv2(tactiles[proc_idx0])
-                tactile = np.ascontiguousarray(
-                    np.moveaxis(tactile, -1, -3)
-                )  # (C, H, W)
-                tactile = torch.from_numpy(tactile).float().div(255.0)
-                proc_list0.append(tactile)  # (C, H, W)
-            tactiles_tensor_dict[tactile_name] = torch.stack(
-                proc_list0, dim=0
-            )  # (T, C, H, W)
+        # Resize tactiles
+        K, T, H, W, C = tactiles.shape
+        tactile_size = (224, 224)
+        tactiles = np.array(
+            [cv2.resize(img, tactile_size) for img in tactiles.reshape(-1, H, W, C)]
+        ).reshape(K, T, *tactile_size[::-1], C)
 
         # Pre-convert data
         state, action, images = self.pre_convert_data(state, action, images)
+        tactiles = self.pre_convert_data_for_tactile(tactiles)
 
         # Convert to tensor
         state_tensor = torch.tensor(state, dtype=torch.float32)
         action_tensor = torch.tensor(action, dtype=torch.float32)
         images_tensor = torch.tensor(images, dtype=torch.uint8)
+        tactiles_tensor = torch.tensor(tactiles, dtype=torch.uint8)
 
         # Augment data
         state_tensor, action_tensor, images_tensor = self.augment_data(
             state_tensor, action_tensor, images_tensor
         )
+        tactiles_tensor = self.augment_data_for_tactile(tactiles_tensor)
 
         # Convert to data structure of policy input and output
         data = {"obs": {}, "action": action_tensor}
@@ -117,8 +129,10 @@ class DiffusionPolicyT3Dataset(DatasetBase, DpStyleDatasetMixin):
             data["obs"][DataKey.get_rgb_image_key(camera_name)] = images_tensor[
                 camera_idx
             ]
-        for tactile_name in self.model_meta_info["tactile"]["tactile_names"]:
-            data["obs"][tactile_name] = tactiles_tensor_dict[tactile_name]
+        for tactile_idx, tactile_name in enumerate(
+            self.model_meta_info["tactile"]["tactile_names"]
+        ):
+            data["obs"][tactile_name] = tactiles_tensor[tactile_idx]
 
         return data
 
@@ -130,9 +144,26 @@ class DiffusionPolicyT3Dataset(DatasetBase, DpStyleDatasetMixin):
 
         return state, action, images
 
-    def process_tactile_cv2(self, img):
-        img = cv2.resize(img, (224, 224))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = cv2.flip(img, 0)
-        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-        return img
+    def pre_convert_data_for_tactile(self, tactiles):
+        tactiles = np.moveaxis(tactiles, -1, -3)
+
+        return tactiles
+
+    def augment_data_for_tactile(self, tactiles):
+        if tactiles.ndim < 3:
+            raise ValueError(
+                f"[{self.__class__.__name__}] Input must have at least 3 dimensions (C, H, W)"
+            )
+        elif tactiles.ndim == 3:
+            tactiles = self.tactile_transforms(tactiles)
+        else:
+            orig_prefix_shape = tactiles.shape[:-3]
+            orig_tactile_list = tactiles.reshape(-1, *tactiles.shape[-3:])
+            transformed_tactile_list = [
+                self.tactile_transforms(img) for img in orig_tactile_list
+            ]
+            tactiles = torch.stack(transformed_tactile_list)
+            new_img_shape = tactiles.shape[-3:]
+            tactiles = tactiles.view(*orig_prefix_shape, *new_img_shape)
+
+        return tactiles

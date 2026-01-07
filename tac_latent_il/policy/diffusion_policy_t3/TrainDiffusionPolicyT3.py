@@ -13,7 +13,7 @@ class TrainDiffusionPolicyT3(TrainDiffusionPolicyTactileBase):
             "--t3_pooling_type",
             type=str,
             default="cls",
-            choices=["global", "cls"],
+            choices=["cls", "global"],
             help="t3 pooling type",
         )
 
@@ -28,7 +28,7 @@ class TrainDiffusionPolicyT3(TrainDiffusionPolicyTactileBase):
 
     def print_policy_info_for_tactile(self):
         print(
-            f"  - t3 type: {self.args.t3_pooling_type}, fine-tune t3: {self.args.enable_tactile_finetune}"
+            f"  - t3 pooling type: {self.args.t3_pooling_type}, fine-tune t3: {self.args.enable_tactile_finetune}"
         )
 
     def get_tactile_kwargs(self):

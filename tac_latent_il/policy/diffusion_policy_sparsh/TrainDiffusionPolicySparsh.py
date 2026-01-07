@@ -30,7 +30,7 @@ class TrainDiffusionPolicySparsh(TrainDiffusionPolicyTactileBase):
 
     def print_policy_info_for_tactile(self):
         print(
-            f"  - sparsh type: {self.args.sparsh_encoder_type}, fine-tune sparsh: {self.args.enable_tactile_finetune}"
+            f"  - sparsh encoder type: {self.args.sparsh_encoder_type}, fine-tune sparsh: {self.args.enable_tactile_finetune}"
         )
 
     def get_tactile_kwargs(self):

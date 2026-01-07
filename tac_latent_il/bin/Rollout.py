@@ -6,6 +6,7 @@ class RolloutMainTLIL(RolloutMain):
     policy_parent_module_str = "tac_latent_il.policy"
     policy_choices = [
         "DiffusionPolicySparsh",
+        "DiffusionPolicyT3",
     ]
 
 
