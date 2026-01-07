@@ -86,7 +86,7 @@ class DiffusionPolicyAnyTouch(DiffusionPolicyTactileBase):
             checkpoint_path = os.path.normpath(
                 os.path.join(
                     os.path.dirname(__file__),
-                    "../../checkpoint/AnyTouch/anytouch.pth",
+                    "../../checkpoint/AnyTouch/checkpoint.pth",
                 )
             )
             print(

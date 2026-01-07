@@ -49,7 +49,7 @@ class TrainDiffusionPolicyAnyTouch(TrainDiffusionPolicyTactileBase):
 
     def print_policy_info_for_tactile(self):
         print(
-            f"  - tactile sensor name: {self.args.tactile_sensor_name}, finetune anytouch: {self.args.enable_tactile_finetune}"
+            f"  - tactile sensor name: {self.args.tactile_sensor_name}, finetune anytouch: {self.args.enable_tactile_finetune}\n"
             f"  - universal token: {self.args.use_universal_sensor_token}, sensor token: {self.args.use_sensor_token}, same patchemb: {self.args.use_same_patchemb}, pooling type: {self.args.tactile_pooling}"
         )
 

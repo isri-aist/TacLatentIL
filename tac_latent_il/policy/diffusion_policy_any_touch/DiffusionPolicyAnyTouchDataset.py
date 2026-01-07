@@ -19,7 +19,7 @@ class DiffusionPolicyAnyTouchDataset(DatasetBase, DpStyleDatasetMixin):
 
         # Copied from:
         # https://github.com/GeWu-Lab/AnyTouch/blob/3ee6c09130baa9f47a14449b47fd151fbd17a163/dataloader/downstream_dataset.py#L110-L117
-        self.tactile_image_transforms = v2.Compose(
+        self.tactile_transforms = v2.Compose(
             [
                 # v2.RandomHorizontalFlip(p=0.5),
                 # v2.RandomVerticalFlip(p=0.5),

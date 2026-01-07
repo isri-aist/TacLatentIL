@@ -31,7 +31,7 @@ Download the AnyTouch pretrained models:
 # Go to the top directory of this repository
 # Activate the venv environment for gdown
 $ cd tac_latent_il/checkpoint/AnyTouch
-$ gdown https://drive.google.com/uc?id=1L4jGUjIHNBMzOiD33Rv0jxWYKHBORD1R -O anytouch.pth
+$ gdown https://drive.google.com/uc?id=1L4jGUjIHNBMzOiD33Rv0jxWYKHBORD1R
 ```
 
 ## Model training
