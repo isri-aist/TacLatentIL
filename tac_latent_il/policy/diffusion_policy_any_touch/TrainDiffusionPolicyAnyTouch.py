@@ -1,3 +1,5 @@
+import argparse
+
 from tac_latent_il.common import TrainDiffusionPolicyTactileBase
 
 from .DiffusionPolicyAnyTouch import DiffusionPolicyAnyTouch
@@ -22,12 +24,14 @@ class TrainDiffusionPolicyAnyTouch(TrainDiffusionPolicyTactileBase):
         )
         parser.add_argument(
             "--use_sensor_token",
-            action="store_true",
+            action=argparse.BooleanOptionalAction,
+            default=True,
             help="whether to use sensor token for tactile embedding in anytouch model",
         )
         parser.add_argument(
             "--use_same_patchemb",
-            action="store_true",
+            action=argparse.BooleanOptionalAction,
+            default=True,
             help="whether to use same patchemb in anytouch model",
         )
         parser.add_argument(
@@ -49,7 +53,7 @@ class TrainDiffusionPolicyAnyTouch(TrainDiffusionPolicyTactileBase):
 
     def print_policy_info_for_tactile(self):
         print(
-            f"  - tactile sensor name: {self.args.tactile_sensor_name}, finetune anytouch: {self.args.enable_tactile_finetune}\n"
+            f"  - tactile sensor name: {self.args.tactile_sensor_name}, fine-tune anytouch: {self.args.enable_tactile_finetune}\n"
             f"  - universal token: {self.args.use_universal_sensor_token}, sensor token: {self.args.use_sensor_token}, same patchemb: {self.args.use_same_patchemb}, pooling type: {self.args.tactile_pooling}"
         )
 

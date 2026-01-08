@@ -11,13 +11,15 @@ from .AnyTouchTactileEncoder import AnyTouchTactileEncoder
 
 # Copied and modified from:
 # https://github.com/GeWu-Lab/AnyTouch/blob/3ee6c09130baa9f47a14449b47fd151fbd17a163/main_probe.py#L66
-def load_model_from_multi_clip(ckpt, model, use_same_patchemb=False):
+def load_model_from_multi_clip(
+    ckpt, model, use_same_patchemb=False, use_sensor_token=True
+):
     new_ckpt = {}
     for key, item in ckpt.items():
         if (
             "touch_model" in key
             or "touch_projection" in key
-            or "sensor_token" in key
+            or ("sensor_token" in key and use_sensor_token)
             and "sensor_token_proj" not in key
         ):
             new_ckpt[key.replace("touch_mae_model.", "")] = copy.deepcopy(item)
@@ -94,7 +96,10 @@ class DiffusionPolicyAnyTouch(DiffusionPolicyTactileBase):
             )
             checkpoint_data = torch.load(checkpoint_path, map_location="cpu")
             self.anytouch_model = load_model_from_multi_clip(
-                checkpoint_data["model"], self.anytouch_model, use_same_patchemb
+                checkpoint_data["model"],
+                self.anytouch_model,
+                use_same_patchemb,
+                use_sensor_token,
             )
         else:
             print(
