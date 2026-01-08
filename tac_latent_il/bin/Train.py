@@ -7,6 +7,7 @@ class TrainMainTLIL(TrainMain):
         "DiffusionPolicySparsh",
         "DiffusionPolicyT3",
         "DiffusionPolicyAnyTouch",
+        "DiffusionPolicyUniT",
     ]
 
 

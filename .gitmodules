@@ -16,3 +16,6 @@
 	path = third_party/any_touch
 	url = https://github.com/GeWu-Lab/AnyTouch.git
 	ignore = untracked
+[submodule "third_party/unit"]
+	path = third_party/unit
+	url = https://github.com/yu-kitagawa/UniT.git

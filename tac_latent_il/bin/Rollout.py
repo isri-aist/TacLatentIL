@@ -8,6 +8,7 @@ class RolloutMainTLIL(RolloutMain):
         "DiffusionPolicySparsh",
         "DiffusionPolicyT3",
         "DiffusionPolicyAnyTouch",
+        "DiffusionPolicyUniT",
     ]
 
 
