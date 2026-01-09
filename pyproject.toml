@@ -37,6 +37,12 @@ anytouch = [
   "timm",
   "gdown",
 ]
+unit = [
+  "timm==0.9.7",
+  "pytorch-lightning>=2.0",
+  "wandb",
+  "gdown",
+]
 
 [tool.setuptools.packages.find]
 include = ["tac_latent_il", "tac_latent_il.*"]

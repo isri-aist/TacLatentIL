@@ -67,7 +67,7 @@ class DiffusionPolicyT3(DiffusionPolicyTactileBase):
                 p.requires_grad = False
             self.t3_trunk.eval()
 
-    def forward_tactile_encoder(self, tactile_image):
+    def forward_tactile_encoder(self, tactile_key, tactile_image):
         t3_output = self.t3_trunk(self.t3_encoder(tactile_image))
         tactile_feature = self.linear(t3_output)
         return tactile_feature

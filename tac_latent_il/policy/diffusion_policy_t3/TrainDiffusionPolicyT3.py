@@ -23,9 +23,6 @@ class TrainDiffusionPolicyT3(TrainDiffusionPolicyTactileBase):
             help="whether to fine-tune t3 model",
         )
 
-    def setup_model_meta_info_for_tactile(self):
-        self.model_meta_info["policy"]["t3_pooling_type"] = self.args.t3_pooling_type
-
     def print_policy_info_for_tactile(self):
         print(
             f"  - t3 pooling type: {self.args.t3_pooling_type}, fine-tune t3: {self.args.enable_tactile_finetune}"

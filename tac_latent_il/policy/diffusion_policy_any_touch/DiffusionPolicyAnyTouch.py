@@ -114,7 +114,7 @@ class DiffusionPolicyAnyTouch(DiffusionPolicyTactileBase):
                 p.requires_grad = False
             self.anytouch_model.eval()
 
-    def forward_tactile_encoder(self, tactile_image):
+    def forward_tactile_encoder(self, tactile_key, tactile_image):
         anytouch_output = self.anytouch_model(
             tactile_image, sensor_type=torch.tensor([self.sensor_type]).to(self.device)
         )

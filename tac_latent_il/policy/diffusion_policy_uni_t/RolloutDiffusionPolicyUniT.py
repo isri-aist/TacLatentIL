@@ -73,7 +73,6 @@ class RolloutDiffusionPolicyUniT(RolloutDiffusionPolicyTactileBase):
 
             tactile = cv2.resize(tactile, (224, 224))
 
-            tactile = np.moveaxis(tactile, -1, -3)
             tactile = torch.tensor(tactile, dtype=torch.uint8)
             tactile = self.tactile_transforms(tactile)
 

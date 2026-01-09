@@ -68,7 +68,7 @@ class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
                 p.requires_grad = False
             self.sparsh_model.eval()
 
-    def forward_tactile_encoder(self, tactile_image):
+    def forward_tactile_encoder(self, tactile_key, tactile_image):
         sparsh_output = self.sparsh_model(tactile_image)
         tactile_feature = self.linear(self.atten_pooler(sparsh_output).squeeze(1))
         return tactile_feature

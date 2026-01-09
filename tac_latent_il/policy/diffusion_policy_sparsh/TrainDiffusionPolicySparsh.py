@@ -23,11 +23,6 @@ class TrainDiffusionPolicySparsh(TrainDiffusionPolicyTactileBase):
             help="whether to fine-tune sparsh model",
         )
 
-    def setup_model_meta_info_for_tactile(self):
-        self.model_meta_info["policy"]["sparsh_encoder_type"] = (
-            self.args.sparsh_encoder_type
-        )
-
     def print_policy_info_for_tactile(self):
         print(
             f"  - sparsh encoder type: {self.args.sparsh_encoder_type}, fine-tune sparsh: {self.args.enable_tactile_finetune}"

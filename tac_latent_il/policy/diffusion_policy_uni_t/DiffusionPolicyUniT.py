@@ -2,8 +2,10 @@ import os
 import sys
 
 import torch
+import torch.nn as nn
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../../third_party/unit"))
+from UniT.model.tactile.utils import ConvPoolingPolicyHead as ConvPoolingHead
 from UniT.taming.models.vqgan import VQModel
 
 from tac_latent_il.common import DiffusionPolicyTactileBase
@@ -16,7 +18,6 @@ class DiffusionPolicyUniT(DiffusionPolicyTactileBase):
         enable_finetune=False,
         load_checkpoint=True,
     ):
-        embed_dim = 84
         ddconfig = {
             "double_z": False,
             "z_channels": 3,
@@ -40,25 +41,39 @@ class DiffusionPolicyUniT(DiffusionPolicyTactileBase):
             },
         }
         config = {
+            "embed_dim": 3,
+            "n_embed": 1024,
             "ddconfig": ddconfig,
             "lossconfig": lossconfig,
-            "n_embed": 1024,
-            "embed_dim": 3,
         }
         self.unit_model = VQModel(**config)
-        self.linear = torch.nn.Linear(embed_dim, output_dim)
+        latent_shape = [3, 16, 20]
+        temp_head = ConvPoolingHead(input_channels=latent_shape[0])
+        with torch.no_grad():
+            embed_dim = temp_head(
+                torch.randn(1, latent_shape[0], latent_shape[1], latent_shape[2])
+            ).shape[1]
+        self.heads = nn.ModuleDict(
+            {
+                tactile_key: nn.Sequential(
+                    ConvPoolingHead(input_channels=latent_shape[0]),
+                    nn.Linear(embed_dim, output_dim),
+                )
+                for tactile_key in self.tactile_keys
+            }
+        )
 
         if load_checkpoint:
-            model_checkpoint_path = os.path.normpath(
+            checkpoint_path = os.path.normpath(
                 os.path.join(
                     os.path.dirname(__file__),
-                    "../../checkpoint/UniT/checkpoint-epoch=340.ckpt",
+                    "../../checkpoint/UniT/checkpoint-epoch=342.ckpt",
                 )
             )
             print(
-                f"[{self.__class__.__name__}] Load UniT encoder pretrain checkpoint: {model_checkpoint_path}"
+                f"[{self.__class__.__name__}] Load UniT pretrain checkpoint: {checkpoint_path}"
             )
-            self.unit_model.init_from_ckpt(model_checkpoint_path)
+            self.unit_model.init_from_ckpt(checkpoint_path)
         else:
             print(
                 f"[{self.__class__.__name__}] Skip loading UniT pretrained checkpoint."
@@ -72,13 +87,12 @@ class DiffusionPolicyUniT(DiffusionPolicyTactileBase):
                 p.requires_grad = False
             self.unit_model.eval()
 
-    def forward_tactile_encoder(self, tactile_image):
-        tactile_image = tactile_image.permute(0, 2, 3, 1)
+    def forward_tactile_encoder(self, tactile_key, tactile_image):
+        unit_input = self.unit_model.get_input({"image": tactile_image}, "image")
+        tactile_feature = self.unit_model.to_latent(unit_input)
+        tactile_feature = self.heads[tactile_key](tactile_feature)
 
-        img_batch = {"image": tactile_image}
-        input = self.unit_model.get_input(img_batch, "image")
-        z = self.unit_model.encoder(input)
-        unit_output = z.mean(dim=3)
-        unit_output = unit_output.view(tactile_image.shape[0], -1)
-        tactile_feature = self.linear(unit_output)
+        batch_size = tactile_image.shape[0]
+        tactile_feature = tactile_feature.reshape(batch_size, -1)
+
         return tactile_feature

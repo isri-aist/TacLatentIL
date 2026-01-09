@@ -15,9 +15,6 @@ class TrainDiffusionPolicyUniT(TrainDiffusionPolicyTactileBase):
             help="whether to fine-tune unit model",
         )
 
-    def setup_model_meta_info_for_tactile(self):
-        pass
-
     def print_policy_info_for_tactile(self):
         print(f"  - fine-tune unit: {self.args.enable_tactile_finetune}")
 

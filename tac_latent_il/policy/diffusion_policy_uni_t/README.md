@@ -18,7 +18,7 @@ Install TacLatentIL:
 ```console
 $ git clone git@github.com:isri-aist/TacLatentIL.git --recursive
 $ cd TacLatentIL
-$ pip install -e .
+$ pip install -e .[unit]
 
 # Go to the top directory of this repository
 $ cd third_party/diffusion_policy
@@ -26,14 +26,17 @@ $ pip install -e .
 
 # Go to the top directory of this repository
 $ cd third_party/unit
-$ pip install -r requirements.txt
 $ pip install -e .
 ```
 
 ## Download (required only for training)
-Download the UniT pretrained model(checkpoint-epoch=340.ckpt) from the following URL and place it in tac_latent_il/checkpoint/UniT:
-
-https://drive.google.com/drive/folders/1B2jVexwWGYDR4tQLsD_C_8ZLK8LdtKOU
+Download the UniT pretrained model:
+```console
+# Go to the top directory of this repository
+# Activate the venv environment for gdown
+$ cd tac_latent_il/checkpoint/UniT
+$ gdown https://drive.google.com/uc?id=12uVJZGyjcHazZ_bezORexZTzWtctOSDq
+```
 
 ## Model training
 Train a model:

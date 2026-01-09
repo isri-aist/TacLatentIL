@@ -269,9 +269,9 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
                     this_nobs_without_tactile[k] = v
             nobs_features = self.obs_encoder(this_nobs_without_tactile)
             tactile_features_list = []
-            for tactile_image in tactile_obs.values():
+            for tactile_key, tactile_image in tactile_obs.items():
                 tactile_features_list.append(
-                    self.forward_tactile_encoder(tactile_image)
+                    self.forward_tactile_encoder(tactile_key, tactile_image)
                 )
             tactile_features = torch.cat(tactile_features_list, dim=1)
             # reshape back to B, Do
@@ -330,9 +330,9 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
                     this_nobs_without_tactile[k] = v
             nobs_features = self.obs_encoder(this_nobs_without_tactile)
             tactile_features_list = []
-            for tactile_image in tactile_obs.values():
+            for tactile_key, tactile_image in tactile_obs.items():
                 tactile_features_list.append(
-                    self.forward_tactile_encoder(tactile_image)
+                    self.forward_tactile_encoder(tactile_key, tactile_image)
                 )
             tactile_features = torch.cat(tactile_features_list, dim=1)
             # reshape back to B, Do
@@ -395,5 +395,5 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
         pass
 
     @abstractmethod
-    def forward_tactile_encoder(self, tactile_image):
+    def forward_tactile_encoder(self, tactile_key, tactile_image):
         pass

@@ -48,9 +48,6 @@ class TrainDiffusionPolicyAnyTouch(TrainDiffusionPolicyTactileBase):
             help="whether to fine-tune AnyTouch model",
         )
 
-    def setup_model_meta_info_for_tactile(self):
-        pass
-
     def print_policy_info_for_tactile(self):
         print(
             f"  - tactile sensor name: {self.args.tactile_sensor_name}, fine-tune anytouch: {self.args.enable_tactile_finetune}\n"

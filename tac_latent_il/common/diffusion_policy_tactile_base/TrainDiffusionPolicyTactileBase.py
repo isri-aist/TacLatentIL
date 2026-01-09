@@ -137,8 +137,6 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
             "tactile_names": self.args.tactile_names,
         }
 
-        self.setup_model_meta_info_for_tactile()
-
     def get_extra_norm_config(self):
         if self.args.norm_type == "limits":
             return {
@@ -347,10 +345,6 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
 
     @abstractmethod
     def set_additional_args_for_tactile(self, parser):
-        pass
-
-    @abstractmethod
-    def setup_model_meta_info_for_tactile(self):
         pass
 
     @abstractmethod

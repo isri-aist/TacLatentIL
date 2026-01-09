@@ -21,14 +21,6 @@ class DiffusionPolicyUniTDataset(DatasetBase, DpStyleDatasetMixin):
 
         tactile_transform_list.append(v2.ToDtype(torch.float32, scale=True))
 
-        # mean and std are copied from
-        # https://github.com/alanzjl/t3/blob/341177f232df3b824a5246b0d1855cd9e4d2cf29/configs/datasets/eval_ds_cls_mini.yaml#L17-L19
-        tactile_transform_list.append(
-            v2.Normalize(
-                mean=[0.02172, 0.04152, 0.04152], std=[0.10158, 0.14423, 0.12185]
-            )
-        )
-
         self.tactile_transforms = v2.Compose(tactile_transform_list)
 
     def setup_variables(self):
@@ -105,7 +97,6 @@ class DiffusionPolicyUniTDataset(DatasetBase, DpStyleDatasetMixin):
 
         # Pre-convert data
         state, action, images = self.pre_convert_data(state, action, images)
-        tactiles = self.pre_convert_data_for_tactile(tactiles)
 
         # Convert to tensor
         state_tensor = torch.tensor(state, dtype=torch.float32)
@@ -143,11 +134,6 @@ class DiffusionPolicyUniTDataset(DatasetBase, DpStyleDatasetMixin):
         images = images * 2.0 - 1.0
 
         return state, action, images
-
-    def pre_convert_data_for_tactile(self, tactiles):
-        tactiles = np.moveaxis(tactiles, -1, -3)
-
-        return tactiles
 
     def augment_data_for_tactile(self, tactiles):
         if tactiles.ndim < 3:

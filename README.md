@@ -26,3 +26,4 @@ Please refer to the README of each policy listed below.
 - **[DiffusionPolicySparsh](./tac_latent_il/policy/diffusion_policy_sparsh)**: Diffusion policy with Sparsh tactile encoder
 - **[DiffusionPolicyT3](./tac_latent_il/policy/diffusion_policy_t3)**: Diffusion policy with T3 tactile encoder
 - **[DiffusionPolicyAnyTouch](./tac_latent_il/policy/diffusion_policy_any_touch)**: Diffusion policy with AnyTouch tactile encoder
+- **[DiffusionPolicyUniT](./tac_latent_il/policy/diffusion_policy_uni_t)**: Diffusion policy with UniT tactile encoder
