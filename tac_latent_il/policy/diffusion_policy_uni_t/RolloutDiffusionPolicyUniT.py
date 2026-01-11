@@ -22,14 +22,6 @@ class RolloutDiffusionPolicyUniT(RolloutDiffusionPolicyTactileBase):
 
         tactile_transform_list.append(v2.ToDtype(torch.float32, scale=True))
 
-        # mean and std are copied from
-        # https://github.com/alanzjl/t3/blob/341177f232df3b824a5246b0d1855cd9e4d2cf29/configs/datasets/eval_ds_cls_mini.yaml#L17-L19
-        tactile_transform_list.append(
-            v2.Normalize(
-                mean=[0.02172, 0.04152, 0.04152], std=[0.10158, 0.14423, 0.12185]
-            )
-        )
-
         self.tactile_transforms = v2.Compose(tactile_transform_list)
 
     def reset_variables(self):
@@ -80,10 +72,7 @@ class RolloutDiffusionPolicyUniT(RolloutDiffusionPolicyTactileBase):
 
         if self.tactiles_buf is None:
             self.tactiles_buf = [
-                [
-                    tactile.clone()
-                    for _ in range(self.model_meta_info["data"]["n_obs_steps"])
-                ]
+                [tactile for _ in range(self.model_meta_info["data"]["n_obs_steps"])]
                 for tactile in tactiles
             ]
         else:
