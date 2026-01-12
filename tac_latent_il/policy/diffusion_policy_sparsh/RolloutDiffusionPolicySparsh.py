@@ -1,10 +1,6 @@
 import cv2
 import numpy as np
 import torch
-from robo_manip_baselines.common import (
-    DataKey,
-    denormalize_data,
-)
 from tactile_ssl.data.digit.utils import compute_diff, enhance_image
 
 from tac_latent_il.common import RolloutDiffusionPolicyTactileBase
@@ -19,36 +15,6 @@ class RolloutDiffusionPolicySparsh(RolloutDiffusionPolicyTactileBase):
         super().reset_variables()
 
         self.init_tactile_dict = {}
-        self.tactiles_buf = None
-
-    def infer_policy(self):
-        # Update observation buffer
-        if len(self.state_keys) > 0:
-            self.update_state_buf()
-        self.update_images_buf()
-        self.update_tactiles_buf()
-
-        # Infer
-        if self.policy_action_buf is None or len(self.policy_action_buf) == 0:
-            input_data = {}
-            if len(self.state_keys) > 0:
-                input_data["state"] = self.get_state()
-            for camera_name, image in zip(self.camera_names, self.get_images()):
-                input_data[DataKey.get_rgb_image_key(camera_name)] = image
-            for tactile_name, tactile in zip(self.tactile_names, self.get_tactiles()):
-                input_data[tactile_name] = tactile
-            action = self.policy.predict_action(input_data)["action"][0]
-            self.policy_action_buf = list(
-                action.cpu().detach().numpy().astype(np.float64)
-            )
-
-        # Store action
-        self.policy_action = denormalize_data(
-            self.policy_action_buf.pop(0), self.model_meta_info["action"]
-        )
-        self.policy_action_list = np.concatenate(
-            [self.policy_action_list, self.policy_action[np.newaxis]]
-        )
 
     def update_tactiles_buf(self):
         tactiles = []

@@ -6,24 +6,18 @@ import numpy as np
 import torch
 from robo_manip_baselines.common import (
     DataKey,
-    DatasetBase,
-    DpStyleDatasetMixin,
     RmbData,
     get_skipped_data_seq,
 )
+
+from tac_latent_il.common import DiffusionPolicyTactileBaseDataset
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../../third_party/sparsh"))
 from tactile_ssl.data.digit.utils import compute_diff, enhance_image
 
 
-class DiffusionPolicySparshDataset(DatasetBase, DpStyleDatasetMixin):
+class DiffusionPolicySparshDataset(DiffusionPolicyTactileBaseDataset):
     """Dataset to train diffusion policy sparsh."""
-
-    def setup_variables(self):
-        self.setup_dp_style_chunk()
-
-    def __len__(self):
-        return len(self.chunk_info_list)
 
     def __getitem__(self, chunk_idx):
         skip = self.model_meta_info["data"]["skip"]
@@ -133,14 +127,6 @@ class DiffusionPolicySparshDataset(DatasetBase, DpStyleDatasetMixin):
             data["obs"][tactile_name] = tactiles_tensor_dict[tactile_name]
 
         return data
-
-    def augment_data(self, state, action, images):
-        state, action, images = super().augment_data(state, action, images)
-
-        # Adjust to a range from -1 to 1 to match the original implementation
-        images = images * 2.0 - 1.0
-
-        return state, action, images
 
     def process_tactile_cv2(self, img):
         img = cv2.resize(img, (224, 224))
