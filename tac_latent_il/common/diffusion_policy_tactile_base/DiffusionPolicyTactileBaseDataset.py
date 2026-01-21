@@ -60,13 +60,18 @@ class DiffusionPolicyTactileBaseDataset(DatasetBase, DpStyleDatasetMixin, ABC):
             )
 
             # Load images
-            images = np.stack(
-                [
-                    rmb_data[DataKey.get_rgb_image_key(camera_name)][::skip][time_idxes]
-                    for camera_name in self.model_meta_info["image"]["camera_names"]
-                ],
-                axis=0,
-            )
+            if len(self.model_meta_info["image"]["camera_names"]) == 0:
+                images = np.zeros((0, len(time_idxes), 480, 640, 3), dtype=np.uint8)
+            else:
+                images = np.stack(
+                    [
+                        rmb_data[DataKey.get_rgb_image_key(camera_name)][::skip][
+                            time_idxes
+                        ]
+                        for camera_name in self.model_meta_info["image"]["camera_names"]
+                    ],
+                    axis=0,
+                )
 
             # Load tactiles
             tactiles = np.stack(
