@@ -30,8 +30,3 @@ class RolloutDiffusionPolicyAnyTouch(RolloutDiffusionPolicyTactileBase):
             f"  - tactile sensor name: {tactile_kwargs['sensor_name']}, fine-tune anytouch: {tactile_kwargs['enable_finetune']}\n"
             f"  - universal token: {tactile_kwargs['use_universal_sensor_token']}, sensor token: {tactile_kwargs['use_sensor_token']}, same patchemb: {tactile_kwargs['use_same_patchemb']}, pooling type: {tactile_kwargs['pooling_method']}"
         )
-
-    def override_policy_args_for_tactile(self, policy_args):
-        tactile_kwargs = self.model_meta_info["policy"]["args"]["tactile_kwargs"]
-        tactile_kwargs["enable_finetune"] = False
-        tactile_kwargs["load_checkpoint"] = False

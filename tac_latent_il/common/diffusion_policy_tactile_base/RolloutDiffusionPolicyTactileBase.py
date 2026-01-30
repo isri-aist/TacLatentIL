@@ -46,7 +46,7 @@ class RolloutDiffusionPolicyTactileBase(RolloutBase, ABC):
         self.print_policy_info_for_tactile()
 
         # Override policy args for rollout
-        self.override_policy_args_for_tactile(self.model_meta_info["policy"]["args"])
+        self.override_policy_args_for_tactile()
 
         # Construct scheduler
         if self.model_meta_info["policy"]["scheduler"] == "ddpm":
@@ -252,6 +252,7 @@ class RolloutDiffusionPolicyTactileBase(RolloutBase, ABC):
     def print_policy_info_for_tactile(self):
         pass
 
-    @abstractmethod
-    def override_policy_args_for_tactile(self, policy_args):
-        pass
+    def override_policy_args_for_tactile(self):
+        tactile_kwargs = self.model_meta_info["policy"]["args"]["tactile_kwargs"]
+        tactile_kwargs["enable_finetune"] = False
+        tactile_kwargs["load_checkpoint"] = False
