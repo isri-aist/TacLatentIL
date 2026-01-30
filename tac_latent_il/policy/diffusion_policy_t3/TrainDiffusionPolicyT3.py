@@ -17,16 +17,8 @@ class TrainDiffusionPolicyT3(TrainDiffusionPolicyTactileBase):
             help="t3 pooling type",
         )
 
-        parser.add_argument(
-            "--enable_tactile_finetune",
-            action="store_true",
-            help="whether to fine-tune t3 model",
-        )
-
     def print_policy_info_for_tactile(self):
-        print(
-            f"  - t3 pooling type: {self.args.t3_pooling_type}, fine-tune t3: {self.args.enable_tactile_finetune}"
-        )
+        print(f"  - t3 pooling type: {self.args.t3_pooling_type}")
 
     def get_tactile_kwargs(self):
         return {

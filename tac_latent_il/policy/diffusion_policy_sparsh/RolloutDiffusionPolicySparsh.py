@@ -70,6 +70,4 @@ class RolloutDiffusionPolicySparsh(RolloutDiffusionPolicyTactileBase):
 
     def print_policy_info_for_tactile(self):
         tactile_kwargs = self.model_meta_info["policy"]["args"]["tactile_kwargs"]
-        print(
-            f"  - sparsh encoder type: {tactile_kwargs['encoder_type']}, fine-tune sparsh: {tactile_kwargs['enable_finetune']}"
-        )
+        print(f"  - sparsh encoder type: {tactile_kwargs['encoder_type']}")

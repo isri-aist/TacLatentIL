@@ -17,16 +17,8 @@ class TrainDiffusionPolicySparsh(TrainDiffusionPolicyTactileBase):
             help="sparsh encoder type",
         )
 
-        parser.add_argument(
-            "--enable_tactile_finetune",
-            action="store_true",
-            help="whether to fine-tune sparsh model",
-        )
-
     def print_policy_info_for_tactile(self):
-        print(
-            f"  - sparsh encoder type: {self.args.sparsh_encoder_type}, fine-tune sparsh: {self.args.enable_tactile_finetune}"
-        )
+        print(f"  - sparsh encoder type: {self.args.sparsh_encoder_type}")
 
     def get_tactile_kwargs(self):
         return {

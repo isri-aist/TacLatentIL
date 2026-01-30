@@ -46,14 +46,14 @@ class DiffusionPolicyUniT(DiffusionPolicyTactileBase):
             "ddconfig": ddconfig,
             "lossconfig": lossconfig,
         }
-        self.unit_model = VQModel(**config)
+        unit_model = VQModel(**config)
         latent_shape = [3, 16, 20]
         temp_head = ConvPoolingHead(input_channels=latent_shape[0])
         with torch.no_grad():
             embed_dim = temp_head(
                 torch.randn(1, latent_shape[0], latent_shape[1], latent_shape[2])
             ).shape[1]
-        self.heads = nn.ModuleDict(
+        tactile_heads = nn.ModuleDict(
             {
                 tactile_key: nn.Sequential(
                     ConvPoolingHead(input_channels=latent_shape[0]),
@@ -73,7 +73,7 @@ class DiffusionPolicyUniT(DiffusionPolicyTactileBase):
             print(
                 f"[{self.__class__.__name__}] Load UniT pretrain checkpoint: {checkpoint_path}"
             )
-            self.unit_model.init_from_ckpt(checkpoint_path)
+            unit_model.init_from_ckpt(checkpoint_path)
         else:
             print(
                 f"[{self.__class__.__name__}] Skip loading UniT pretrained checkpoint."
@@ -83,14 +83,20 @@ class DiffusionPolicyUniT(DiffusionPolicyTactileBase):
             print(f"[{self.__class__.__name__}] Fine-tune UniT model.")
         else:
             print(f"[{self.__class__.__name__}] Freeze UniT model.")
-            for p in self.unit_model.parameters():
+            for p in unit_model.parameters():
                 p.requires_grad = False
-            self.unit_model.eval()
+            unit_model.eval()
+
+        self.tactile_model = torch.nn.Module()
+        self.tactile_model.unit_model = unit_model
+        self.tactile_model.tactile_heads = tactile_heads
 
     def forward_tactile_encoder(self, tactile_key, tactile_image):
-        unit_input = self.unit_model.get_input({"image": tactile_image}, "image")
-        tactile_feature = self.unit_model.to_latent(unit_input)
-        tactile_feature = self.heads[tactile_key](tactile_feature)
+        unit_input = self.tactile_model.unit_model.get_input(
+            {"image": tactile_image}, "image"
+        )
+        tactile_feature = self.tactile_model.unit_model.to_latent(unit_input)
+        tactile_feature = self.tactile_model.tactile_heads[tactile_key](tactile_feature)
 
         batch_size = tactile_image.shape[0]
         tactile_feature = tactile_feature.reshape(batch_size, -1)

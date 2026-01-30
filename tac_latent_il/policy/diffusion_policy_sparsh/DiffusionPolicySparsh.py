@@ -18,12 +18,12 @@ class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
         enable_finetune=False,
         load_checkpoint=True,
     ):
-        self.sparsh_model = vit_base(
+        sparsh_model = vit_base(
             in_chans=6, pos_embed_fn="sinusoidal", num_register_tokens=1
         )
-        self.atten_pooler = AttentivePooler()
-        embed_dim = self.atten_pooler.query_tokens.shape[-1]
-        self.linear = torch.nn.Linear(embed_dim, output_dim)
+        atten_pooler = AttentivePooler()
+        embed_dim = atten_pooler.query_tokens.shape[-1]
+        tactile_head = torch.nn.Linear(embed_dim, output_dim)
 
         if load_checkpoint:
             checkpoint_path = os.path.normpath(
@@ -54,7 +54,7 @@ class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
                 new_key: checkpoint_data["model"][target_key]
                 for new_key, target_key in zip(new_keys, target_keys)
             }
-            self.sparsh_model.load_state_dict(new_state_dict, strict=False)
+            sparsh_model.load_state_dict(new_state_dict, strict=False)
         else:
             print(
                 f"[{self.__class__.__name__}] Skip loading Sparsh pretrained checkpoint."
@@ -64,11 +64,18 @@ class DiffusionPolicySparsh(DiffusionPolicyTactileBase):
             print(f"[{self.__class__.__name__}] Fine-tune Sparsh model.")
         else:
             print(f"[{self.__class__.__name__}] Freeze Sparsh model.")
-            for p in self.sparsh_model.parameters():
+            for p in sparsh_model.parameters():
                 p.requires_grad = False
-            self.sparsh_model.eval()
+            sparsh_model.eval()
+
+        self.tactile_model = torch.nn.Module()
+        self.tactile_model.sparsh_model = sparsh_model
+        self.tactile_model.atten_pooler = atten_pooler
+        self.tactile_model.tactile_head = tactile_head
 
     def forward_tactile_encoder(self, tactile_key, tactile_image):
-        sparsh_output = self.sparsh_model(tactile_image)
-        tactile_feature = self.linear(self.atten_pooler(sparsh_output).squeeze(1))
+        sparsh_output = self.tactile_model.sparsh_model(tactile_image)
+        tactile_feature = self.tactile_model.tactile_head(
+            self.tactile_model.atten_pooler(sparsh_output).squeeze(1)
+        )
         return tactile_feature

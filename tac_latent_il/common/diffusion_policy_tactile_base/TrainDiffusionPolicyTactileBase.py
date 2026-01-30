@@ -117,6 +117,13 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
             help="tactile names",
         )
 
+        parser.add_argument(
+            "--enable_tactile_finetune",
+            action=argparse.BooleanOptionalAction,
+            default=True,
+            help="whether to fine-tune tactile model",
+        )
+
         self.set_additional_args_for_tactile(parser)
 
     def setup_model_meta_info(self):
@@ -293,7 +300,7 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
             f"  - use ema: {self.args.use_ema}, backbone: {self.args.backbone}, scheduler: {self.args.scheduler}\n"
             f"  - horizon: {self.args.horizon}, obs steps: {self.args.n_obs_steps}, action steps: {self.args.n_action_steps}\n"
             f"  - image size: {self.args.image_size}, image crop size: {self.args.image_crop_size}\n"
-            f"  - tactile names: {self.args.tactile_names}"
+            f"  - tactile names: {self.args.tactile_names}, tactile fine-tune: {self.args.enable_tactile_finetune}"
         )
         self.print_policy_info_for_tactile()
 

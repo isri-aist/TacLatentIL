@@ -9,14 +9,10 @@ class TrainDiffusionPolicyUniT(TrainDiffusionPolicyTactileBase):
     DatasetClass = DiffusionPolicyUniTDataset
 
     def set_additional_args_for_tactile(self, parser):
-        parser.add_argument(
-            "--enable_tactile_finetune",
-            action="store_true",
-            help="whether to fine-tune unit model",
-        )
+        pass
 
     def print_policy_info_for_tactile(self):
-        print(f"  - fine-tune unit: {self.args.enable_tactile_finetune}")
+        pass
 
     def get_tactile_kwargs(self):
         return {

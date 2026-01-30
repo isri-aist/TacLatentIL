@@ -60,7 +60,7 @@ class DiffusionPolicyAnyTouch(DiffusionPolicyTactileBase):
                 "../../../third_party/any_touch/CLIP-ViT-L-14-DataComp.XL-s13B-b90K/config.json",
             )
         )
-        self.anytouch_model = AnyTouchTactileEncoder(
+        anytouch_model = AnyTouchTactileEncoder(
             anytouch_config,
             1,
             None,
@@ -70,7 +70,7 @@ class DiffusionPolicyAnyTouch(DiffusionPolicyTactileBase):
             pooling_method,
         )
         embed_dim = anytouch_config.projection_dim
-        self.linear = torch.nn.Linear(embed_dim, output_dim)
+        tactile_head = torch.nn.Linear(embed_dim, output_dim)
 
         if use_universal_sensor_token:
             self.sensor_type = -1
@@ -95,9 +95,9 @@ class DiffusionPolicyAnyTouch(DiffusionPolicyTactileBase):
                 f"[{self.__class__.__name__}] Load AnyTouch pretrained checkpoint: {checkpoint_path}"
             )
             checkpoint_data = torch.load(checkpoint_path, map_location="cpu")
-            self.anytouch_model = load_model_from_multi_clip(
+            anytouch_model = load_model_from_multi_clip(
                 checkpoint_data["model"],
-                self.anytouch_model,
+                anytouch_model,
                 use_same_patchemb,
                 use_sensor_token,
             )
@@ -110,13 +110,18 @@ class DiffusionPolicyAnyTouch(DiffusionPolicyTactileBase):
             print(f"[{self.__class__.__name__}] Fine-tune AnyTouch model.")
         else:
             print(f"[{self.__class__.__name__}] Freeze AnyTouch model.")
-            for p in self.anytouch_model.parameters():
+            for p in anytouch_model.parameters():
                 p.requires_grad = False
-            self.anytouch_model.eval()
+            anytouch_model.eval()
+
+        self.tactile_model = torch.nn.Module()
+        self.tactile_model.anytouch_model = anytouch_model
+        self.tactile_model.tactile_head = tactile_head
 
     def forward_tactile_encoder(self, tactile_key, tactile_image):
-        anytouch_output = self.anytouch_model(
-            tactile_image, sensor_type=torch.tensor([self.sensor_type]).to(self.device)
+        anytouch_output = self.tactile_model.anytouch_model(
+            tactile_image,
+            sensor_type=torch.tensor([self.sensor_type], device=self.device),
         )
-        tactile_feature = self.linear(anytouch_output)
+        tactile_feature = self.tactile_model.tactile_head(anytouch_output)
         return tactile_feature
