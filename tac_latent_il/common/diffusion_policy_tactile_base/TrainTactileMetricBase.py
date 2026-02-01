@@ -9,6 +9,7 @@ import yaml
 from diffusion_policy.common.pytorch_util import dict_apply, optimizer_to
 from diffusion_policy.model.common.lr_scheduler import get_scheduler
 from diffusion_policy.model.diffusion.ema_model import EMAModel
+from robo_manip_baselines.common import DataKey
 from tqdm import tqdm
 
 
@@ -45,6 +46,7 @@ class TactileMetricBase(nn.Module):
 
     def __init__(
         self,
+        action_dim,
         tactile_keys,
         use_teacher_ema=True,
         tactile_feature_dim=64,
@@ -63,7 +65,7 @@ class TactileMetricBase(nn.Module):
 
         dynamics_hidden_dim = 256
         self.dynamics_head = nn.Sequential(
-            nn.Linear(2 * tactile_feature_dim, dynamics_hidden_dim),
+            nn.Linear(2 * tactile_feature_dim + action_dim, dynamics_hidden_dim),
             nn.ReLU(),
             nn.Linear(dynamics_hidden_dim, tactile_feature_dim),
         )
@@ -100,6 +102,7 @@ class TactileMetricBase(nn.Module):
 
     def forward_batch(self, batch, temperature=0.1):
         obs = batch["obs"]
+        action = batch["action"]  # (B, T, Da)
 
         loss_sum = torch.zeros((), device=next(self.parameters()).device)
         logit_pos_sum = torch.zeros_like(loss_sum)
@@ -108,16 +111,23 @@ class TactileMetricBase(nn.Module):
             tactile_seq = obs[k]  # (B, T, C, H, W)
             if tactile_seq.shape[1] < 3:
                 raise ValueError(
-                    f"[{self.__class__.__name__}] Horizon must be >= 3: tactile_seq.shape[1]"
+                    f"[{self.__class__.__name__}] Tactile horizon must be >= 3: {tactile_seq.shape[1]}"
+                )
+            if action.shape[1] < 2:
+                raise ValueError(
+                    f"[{self.__class__.__name__}] Action horizon must be >= 2: {action.shape[1]}"
                 )
 
             x_prev = tactile_seq[:, 0]
             x_curr = tactile_seq[:, 1]
             x_next = tactile_seq[:, 2]
+            a_curr = action[:, 1]
 
             z_prev = self.encoder.forward_one(k, x_prev)
             z_curr = self.encoder.forward_one(k, x_curr)
-            z_hat_next = self.dynamics_head(torch.cat([z_prev, z_curr], dim=-1))
+
+            # f([z_{t-1}, z_t, a_t]) -> z_{t+1}
+            z_hat_next = self.dynamics_head(torch.cat([z_prev, z_curr, a_curr], dim=-1))
 
             with torch.no_grad():
                 if self.use_teacher_ema:
@@ -143,6 +153,13 @@ class TrainTactileMetricBase:
         super().set_additional_args_for_tactile(parser)
 
         parser.set_defaults(state_keys=[])
+        parser.set_defaults(
+            action_keys=[
+                DataKey.COMMAND_EEF_POSE_REL,
+                DataKey.COMMAND_GRIPPER_JOINT_POS,
+                DataKey.COMMAND_GRIPPER_JOINT_POS_REL,
+            ]
+        )
         parser.set_defaults(camera_names=[])
         parser.set_defaults(train_ratio=0.8)
         parser.set_defaults(batch_size=32)
@@ -162,7 +179,9 @@ class TrainTactileMetricBase:
 
     def setup_policy(self):
         # Construct only tactile metric model (no diffusion policy)
+        action_dim = len(self.model_meta_info["action"]["example"])
         self.policy = self.TactileMetricClass(
+            action_dim=action_dim,
             tactile_keys=self.args.tactile_names,
             use_teacher_ema=self.args.use_teacher_ema,
             tactile_feature_dim=self.args.tactile_feature_dim,
