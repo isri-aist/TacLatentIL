@@ -197,11 +197,10 @@ class TrainTactileMetricBase:
             eps=1e-8,
         )
 
-        num_warmup_steps = 500
         self.lr_scheduler = get_scheduler(
             name="cosine",
             optimizer=self.optimizer,
-            num_warmup_steps=num_warmup_steps,
+            num_warmup_steps=50,
             num_training_steps=(len(self.train_dataloader) * self.args.num_epochs),
         )
 

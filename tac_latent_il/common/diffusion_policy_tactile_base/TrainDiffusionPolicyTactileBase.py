@@ -50,7 +50,7 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
         parser.set_defaults(norm_type="limits")
 
         parser.set_defaults(batch_size=64)
-        parser.set_defaults(num_epochs=2000)
+        parser.set_defaults(num_epochs=800)
         parser.set_defaults(lr=1e-4)
 
         parser.add_argument(
@@ -277,14 +277,10 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
                 f"[{self.__class__.__name__}] The transformer backbone is not supported."
             )
 
-        if self.args.backbone == "cnn":
-            num_warmup_steps = 500
-        else:  # if self.args.backbone == "transformer"
-            num_warmup_steps = 1000
         self.lr_scheduler = get_scheduler(
             name="cosine",
             optimizer=self.optimizer,
-            num_warmup_steps=num_warmup_steps,
+            num_warmup_steps=200,
             num_training_steps=(len(self.train_dataloader) * self.args.num_epochs),
         )
 
