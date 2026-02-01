@@ -88,17 +88,66 @@ class TactileMetricBase(nn.Module):
             self.teacher_encoder = None
             self.teacher_ema = None
 
+        self.queue_size = 1024
+        self.register_buffer(
+            "neg_queue",
+            torch.empty(self.queue_size, tactile_feature_dim),
+            persistent=False,
+        )
+        self.register_buffer(
+            "neg_queue_ptr", torch.zeros((), dtype=torch.long), persistent=False
+        )
+        self.register_buffer(
+            "neg_queue_filled", torch.zeros((), dtype=torch.long), persistent=False
+        )
+
     @torch.no_grad()
     def step_teacher_ema(self):
         if self.use_teacher_ema:
             self.teacher_ema.step(self.encoder)
 
+    @torch.no_grad()
+    def enqueue(self, k):
+        k = k.detach()
+        B, D = k.shape
+        ptr = int(self.neg_queue_ptr.item())
+        # write in a ring buffer
+        if B >= self.queue_size:
+            self.neg_queue.copy_(k[-self.queue_size :])
+            ptr = 0
+            filled = self.queue_size
+        else:
+            end = ptr + B
+            if end <= self.queue_size:
+                self.neg_queue[ptr:end] = k
+            else:
+                first = self.queue_size - ptr
+                self.neg_queue[ptr:] = k[:first]
+                self.neg_queue[: end - self.queue_size] = k[first:]
+            ptr = end % self.queue_size
+            filled = min(self.queue_size, int(self.neg_queue_filled.item()) + B)
+        self.neg_queue_ptr.fill_(ptr)
+        self.neg_queue_filled.fill_(filled)
+
     def compute_infonce_loss(self, q, k, temperature=0.1):
         q = F.normalize(q, dim=-1)
         k = F.normalize(k, dim=-1)
-        logits = (q @ k.t()) / temperature  # (B, B)
-        labels = torch.arange(q.shape[0], device=q.device)
-        return F.cross_entropy(logits, labels), logits
+        logits_inbatch = (q @ k.t()) / temperature  # (B, B)
+
+        # queue negatives
+        logits_all = logits_inbatch
+        qfilled = int(self.neg_queue_filled.item())
+        if qfilled > 0:
+            neg = self.neg_queue[:qfilled]
+            neg = F.normalize(neg, dim=-1)
+            logits_queue = (q @ neg.t()) / temperature  # (B, Q)
+            logits_all = torch.cat([logits_inbatch, logits_queue], dim=1)  # (B, B+Q)
+
+        labels = torch.arange(
+            q.shape[0], device=q.device
+        )  # positives are diagonal in first B columns
+        loss = F.cross_entropy(logits_all, labels)
+        return loss, logits_all
 
     def forward_batch(self, batch, temperature=0.1):
         obs = batch["obs"]
@@ -138,7 +187,10 @@ class TactileMetricBase(nn.Module):
             loss_k, logits = self.compute_infonce_loss(
                 z_hat_next, z_next, temperature=temperature
             )
-            logit_pos_sum += logits.diag().mean()
+            with torch.no_grad():
+                self.enqueue(z_next)
+
+            logit_pos_sum += logits[:, : logits.shape[0]].diag().mean()
             loss_sum += loss_k
 
         loss = loss_sum / len(self.tactile_keys)
