@@ -164,6 +164,7 @@ class TrainTactileMetricBase:
         parser.set_defaults(train_ratio=0.8)
         parser.set_defaults(batch_size=32)
         parser.set_defaults(num_epochs=100)
+        parser.set_defaults(lr=1e-4)
 
         # add metric-specific args
         parser.add_argument("--tactile_feature_dim", type=int, default=64)
@@ -189,9 +190,21 @@ class TrainTactileMetricBase:
         )
 
         # Construct optimizer
+        encoder_params = []
+        head_params = []
+        for name, p in self.policy.named_parameters():
+            if not p.requires_grad:
+                continue
+            if name.startswith("encoder."):
+                encoder_params.append(p)
+            else:
+                head_params.append(p)
+
         self.optimizer = torch.optim.AdamW(
-            (p for p in self.policy.parameters() if p.requires_grad),
-            lr=self.args.lr,
+            [
+                {"params": encoder_params, "lr": 0.1 * self.args.lr},
+                {"params": head_params, "lr": self.args.lr},
+            ],
             weight_decay=self.args.weight_decay,
             betas=(0.95, 0.999),
             eps=1e-8,
