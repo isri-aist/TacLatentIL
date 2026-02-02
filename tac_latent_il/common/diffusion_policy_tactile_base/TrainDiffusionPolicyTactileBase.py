@@ -73,7 +73,7 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
         parser.add_argument(
             "--scheduler",
             type=str,
-            default="ddpm",
+            default="ddim",
             choices=["ddpm", "ddim"],
             help="type of noise scheduler ('ddpm' or 'ddim')",
         )
