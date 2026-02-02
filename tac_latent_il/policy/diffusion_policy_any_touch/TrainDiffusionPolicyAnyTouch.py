@@ -19,7 +19,8 @@ class TrainDiffusionPolicyAnyTouch(TrainDiffusionPolicyTactileBase):
         )
         parser.add_argument(
             "--use_universal_sensor_token",
-            action="store_true",
+            action=argparse.BooleanOptionalAction,
+            default=True,
             help="whether to use universal sensor token instead of specific sensor token in anytouch model",
         )
         parser.add_argument(

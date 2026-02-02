@@ -280,6 +280,7 @@ class TrainTactileMetricBase:
             f"  - tactile names: {self.args.tactile_names}, tactile fine-tune: {self.args.enable_tactile_finetune}\n"
             f"  - teacher ema: {self.args.use_teacher_ema}, temperature: {self.args.temperature}"
         )
+        self.print_policy_info_for_tactile()
 
     def train_loop(self):
         metrics_path = Path(self.args.checkpoint_dir) / "tactile_metric.yaml"
