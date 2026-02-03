@@ -51,7 +51,7 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
 
         parser.set_defaults(camera_names=[])
         parser.set_defaults(batch_size=32)
-        parser.set_defaults(num_epochs=600)
+        parser.set_defaults(num_epochs=480)
         parser.set_defaults(lr=1e-4)
 
         parser.add_argument(
