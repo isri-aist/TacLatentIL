@@ -239,13 +239,16 @@ class TrainTactileMetricBase:
     def setup_policy(self):
         # Construct only tactile metric model (no diffusion policy)
         action_dim = len(self.model_meta_info["action"]["example"])
-        self.policy = self.TactileMetricClass(
+
+        self.model_meta_info["policy"]["args"] = dict(
             action_dim=action_dim,
             tactile_keys=self.args.tactile_names,
             use_teacher_ema=self.args.use_teacher_ema,
             tactile_feature_dim=self.args.tactile_feature_dim,
             tactile_kwargs=self.get_tactile_kwargs(),
         )
+
+        self.policy = self.TactileMetricClass(**self.model_meta_info["policy"]["args"])
 
         # Construct optimizer
         encoder_params = []
