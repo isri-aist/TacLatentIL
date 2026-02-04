@@ -230,6 +230,12 @@ class TrainTactileMetricBase:
 
         parser.add_argument("--temperature", type=float, default=0.1)
 
+    def setup_model_meta_info(self):
+        super().setup_model_meta_info()
+
+        self.model_meta_info["policy"]["use_teacher_ema"] = self.args.use_teacher_ema
+        self.model_meta_info["policy"]["temperature"] = self.args.temperature
+
     def setup_policy(self):
         # Construct only tactile metric model (no diffusion policy)
         action_dim = len(self.model_meta_info["action"]["example"])
