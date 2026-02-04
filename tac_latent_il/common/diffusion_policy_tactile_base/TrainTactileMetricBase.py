@@ -214,7 +214,7 @@ class TrainTactileMetricBase:
         )
         parser.set_defaults(camera_names=[])
         parser.set_defaults(train_ratio=0.8)
-        parser.set_defaults(batch_size=32)
+        parser.set_defaults(batch_size=16)
         parser.set_defaults(num_epochs=100)
         parser.set_defaults(lr=1e-4)
 
