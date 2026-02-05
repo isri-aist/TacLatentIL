@@ -333,9 +333,9 @@ class TrainTactileMetricBase:
                 # Update best checkpoint
                 self.update_best_ckpt(epoch_summary, policy=self.policy)
 
-            # Save current checkpoint
-            if epoch % max(self.args.num_epochs // 10, 1) == 0:
-                self.save_current_ckpt(f"epoch{epoch:0>4}", policy=self.policy)
+            # # Save current checkpoint
+            # if epoch % max(self.args.num_epochs // 10, 1) == 0:
+            #     self.save_current_ckpt(f"epoch{epoch:0>4}", policy=self.policy)
 
             # Save metrics
             metrics = {
