@@ -76,6 +76,12 @@ def main():
         action="store_true",
         help="print each run without aggregation",
     )
+    parser.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="output yaml path",
+    )
     args = parser.parse_args()
 
     root = Path(args.root_dir).expanduser().resolve()
@@ -113,9 +119,11 @@ def main():
         loss_header = "min_loss_infonce"
         epoch_header = "min_epoch"
         temp_header = "temperature"
+        n_header = "n"
         loss_width = max(len(loss_header), 10)
         epoch_width = max(len(epoch_header), 6)
         temp_width = max(len(temp_header), 11)
+        n_width = max(len(n_header), 3)
         dir_header = "dir_name"
         dir_width = (
             max(len(dir_header), *(len(r["dirname"]) for r in rows_valid))
@@ -128,6 +136,7 @@ def main():
             loss_header.rjust(loss_width),
             epoch_header.rjust(epoch_width),
             temp_header.rjust(temp_width),
+            n_header.rjust(n_width),
         ]
         if args.print_dirname:
             header_parts.append(dir_header.ljust(dir_width))
@@ -142,6 +151,7 @@ def main():
                 loss_str.rjust(loss_width),
                 epoch_str.rjust(epoch_width),
                 temp_str.rjust(temp_width),
+                str(r["n"]).rjust(n_width),
             ]
             if args.print_dirname:
                 parts.append(r["dirname"].ljust(dir_width))
@@ -162,10 +172,10 @@ def main():
         agg_rows.append(
             {
                 "policy": policy,
-                "temperature": temp,
-                "n": n,
                 "mean": mean,
                 "var": var,
+                "temperature": temp,
+                "n": n,
             }
         )
 
@@ -173,21 +183,21 @@ def main():
     agg_rows = sorted(agg_rows, key=lambda r: r["mean"])
 
     policy_width = max(len("policy"), *(len(r["policy"]) for r in agg_rows))
-    n_header = "n"
     mean_header = "mean_loss"
     var_header = "var_loss"
     temp_header = "temperature"
-    n_width = max(len(n_header), 3)
+    n_header = "n"
     mean_width = max(len(mean_header), 10)
     var_width = max(len(var_header), 10)
     temp_width = max(len(temp_header), 11)
+    n_width = max(len(n_header), 3)
 
     header_parts = [
         "policy".ljust(policy_width),
-        n_header.rjust(n_width),
         mean_header.rjust(mean_width),
         var_header.rjust(var_width),
         temp_header.rjust(temp_width),
+        n_header.rjust(n_width),
     ]
     print("  ".join(header_parts))
 
@@ -195,13 +205,35 @@ def main():
         temp_str = str(r["temperature"]) if r["temperature"] is not None else "None"
         parts = [
             r["policy"].ljust(policy_width),
-            str(r["n"]).rjust(n_width),
             f"{r['mean']:.2f}".rjust(mean_width),
             f"{r['var']:.4f}".rjust(var_width),
             temp_str.rjust(temp_width),
+            str(r["n"]).rjust(n_width),
         ]
         print("  ".join(parts))
 
+    # Save
+    if args.out:
+        out_path = args.out
+        with open(out_path, "w") as f:
+            yaml.safe_dump(
+                [
+                    {
+                        "policy": r["policy"],
+                        "temperature": r["temperature"],
+                        "n": r["n"],
+                        "mean_loss_infonce": float(r["mean"]),
+                        "var_loss_infonce": float(r["var"]),
+                    }
+                    for r in agg_rows
+                ],
+                f,
+                sort_keys=False,
+            )
+
+        print(f"Save {out_path}")
+
+    # Plot
     import matplotlib.pyplot as plt
     import numpy as np
 
