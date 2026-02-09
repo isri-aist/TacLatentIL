@@ -1,6 +1,7 @@
 import argparse
 import os
 import pickle
+from collections import defaultdict
 from pathlib import Path
 
 import yaml
@@ -54,7 +55,7 @@ def get_policy_name(meta: dict):
     encoder_type = tactile_kwargs.get("encoder_type", None)
 
     if encoder_type:
-        return f"{policy_name}(encoder_type={encoder_type})"
+        return f"{policy_name}({encoder_type})"
     return policy_name
 
 
@@ -68,7 +69,12 @@ def main():
     parser.add_argument(
         "--print-dirname",
         action="store_true",
-        help="also print leaf directory name",
+        help="also print leaf directory name (only in raw mode)",
+    )
+    parser.add_argument(
+        "--raw",
+        action="store_true",
+        help="print each run without aggregation",
     )
     args = parser.parse_args()
 
@@ -96,51 +102,104 @@ def main():
             }
         )
 
-    # sort by InfoNCE
-    rows = sorted(
-        rows,
-        key=lambda r: float("inf") if r["loss"] is None else r["loss"],
-    )
+    # drop None losses for aggregation/sorting stability
+    rows_valid = [r for r in rows if r["loss"] is not None]
 
-    # column widths
-    policy_width = max(len("policy"), *(len(r["policy"]) for r in rows))
-    loss_header = "min_loss_infonce"
-    epoch_header = "min_epoch"
+    if args.raw:
+        # sort by InfoNCE (smaller is better)
+        rows_valid = sorted(rows_valid, key=lambda r: r["loss"])
+
+        policy_width = max(len("policy"), *(len(r["policy"]) for r in rows_valid))
+        loss_header = "min_loss_infonce"
+        epoch_header = "min_epoch"
+        temp_header = "temperature"
+        loss_width = max(len(loss_header), 10)
+        epoch_width = max(len(epoch_header), 6)
+        temp_width = max(len(temp_header), 11)
+        dir_header = "dir_name"
+        dir_width = (
+            max(len(dir_header), *(len(r["dirname"]) for r in rows_valid))
+            if args.print_dirname
+            else 0
+        )
+
+        header_parts = [
+            "policy".ljust(policy_width),
+            loss_header.rjust(loss_width),
+            epoch_header.rjust(epoch_width),
+            temp_header.rjust(temp_width),
+        ]
+        if args.print_dirname:
+            header_parts.append(dir_header.ljust(dir_width))
+        print("  ".join(header_parts))
+
+        for r in rows_valid:
+            loss_str = f"{r['loss']:.2f}"
+            epoch_str = str(r["epoch"]) if r["epoch"] is not None else "None"
+            temp_str = str(r["temperature"]) if r["temperature"] is not None else "None"
+            parts = [
+                r["policy"].ljust(policy_width),
+                loss_str.rjust(loss_width),
+                epoch_str.rjust(epoch_width),
+                temp_str.rjust(temp_width),
+            ]
+            if args.print_dirname:
+                parts.append(r["dirname"].ljust(dir_width))
+            print("  ".join(parts))
+        return
+
+    # ---- aggregated mode (policy-wise mean/var) ----
+    groups = defaultdict(list)
+    for r in rows_valid:
+        # group by policy (and temperature if you want strict separation)
+        groups[(r["policy"], r["temperature"])].append(r["loss"])
+
+    agg_rows = []
+    for (policy, temp), losses in groups.items():
+        n = len(losses)
+        mean = sum(losses) / n
+        var = sum((x - mean) ** 2 for x in losses) / n  # population variance
+        agg_rows.append(
+            {
+                "policy": policy,
+                "temperature": temp,
+                "n": n,
+                "mean": mean,
+                "var": var,
+            }
+        )
+
+    # sort by mean (smaller is better)
+    agg_rows = sorted(agg_rows, key=lambda r: r["mean"])
+
+    policy_width = max(len("policy"), *(len(r["policy"]) for r in agg_rows))
+    n_header = "n"
+    mean_header = "mean_loss"
+    var_header = "var_loss"
     temp_header = "temperature"
-    loss_width = max(len(loss_header), 10)  # enough for "12345.67"
-    epoch_width = max(len(epoch_header), 6)
-    temp_width = max(len(temp_header), 11)  # enough for typical floats/None
-    dir_header = "dir_name"
-    dir_width = (
-        max(len(dir_header), *(len(r["dirname"]) for r in rows))
-        if args.print_dirname
-        else 0
-    )
+    n_width = max(len(n_header), 3)
+    mean_width = max(len(mean_header), 10)
+    var_width = max(len(var_header), 10)
+    temp_width = max(len(temp_header), 11)
 
-    # header
     header_parts = [
         "policy".ljust(policy_width),
-        loss_header.rjust(loss_width),
-        epoch_header.rjust(epoch_width),
+        n_header.rjust(n_width),
+        mean_header.rjust(mean_width),
+        var_header.rjust(var_width),
         temp_header.rjust(temp_width),
     ]
-    if args.print_dirname:
-        header_parts.append(dir_header.ljust(dir_width))
     print("  ".join(header_parts))
 
-    # rows
-    for r in rows:
-        loss_str = f"{r['loss']:.2f}" if r["loss"] is not None else "None"
-        epoch_str = str(r["epoch"]) if r["epoch"] is not None else "None"
+    for r in agg_rows:
         temp_str = str(r["temperature"]) if r["temperature"] is not None else "None"
         parts = [
             r["policy"].ljust(policy_width),
-            loss_str.rjust(loss_width),
-            epoch_str.rjust(epoch_width),
+            str(r["n"]).rjust(n_width),
+            f"{r['mean']:.2f}".rjust(mean_width),
+            f"{r['var']:.4f}".rjust(var_width),
             temp_str.rjust(temp_width),
         ]
-        if args.print_dirname:
-            parts.append(r["dirname"].ljust(dir_width))
         print("  ".join(parts))
 
 
