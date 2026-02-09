@@ -202,6 +202,23 @@ def main():
         ]
         print("  ".join(parts))
 
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    policies = [r["policy"] for r in agg_rows]
+    means = np.array([r["mean"] for r in agg_rows])
+    stds = np.sqrt(np.array([r["var"] for r in agg_rows]))
+
+    x = np.arange(len(policies))
+
+    plt.figure(figsize=(0.6 * len(policies) + 2, 4))
+    plt.bar(x, means, yerr=stds, capsize=4)
+    plt.xticks(x, policies, rotation=45, ha="right")
+    plt.ylabel("mean InfoNCE loss")
+    plt.title("Tactile metric (mean ± std)")
+    plt.tight_layout()
+    plt.show()
+
 
 if __name__ == "__main__":
     main()
