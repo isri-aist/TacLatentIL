@@ -80,7 +80,7 @@ def main():
         "--out",
         type=str,
         default=None,
-        help="output yaml path",
+        help="output yaml path (aggregated). if omitted, no yaml is saved",
     )
     args = parser.parse_args()
 
@@ -105,6 +105,7 @@ def main():
                 "epoch": min_epoch,
                 "temperature": get_temperature(meta),
                 "dirname": run_dir.name,
+                "n": 1,
             }
         )
 
@@ -220,10 +221,10 @@ def main():
                 [
                     {
                         "policy": r["policy"],
-                        "temperature": r["temperature"],
-                        "n": r["n"],
                         "mean_loss_infonce": float(r["mean"]),
                         "var_loss_infonce": float(r["var"]),
+                        "temperature": r["temperature"],
+                        "n": r["n"],
                     }
                     for r in agg_rows
                 ],

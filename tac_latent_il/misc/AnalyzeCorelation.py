@@ -272,11 +272,11 @@ def main():
     plt.tight_layout()
 
     out_png = out_dir / "metric_vs_success.png"
-    out_pdf = out_dir / "metric_vs_success.pdf"
     plt.savefig(out_png, dpi=200)
-    plt.savefig(out_pdf)
     print(f"Saved: {out_png}")
-    print(f"Saved: {out_pdf}")
+    # out_pdf = out_dir / "metric_vs_success.pdf"
+    # plt.savefig(out_pdf)
+    # print(f"Saved: {out_pdf}")
     plt.show()
 
 

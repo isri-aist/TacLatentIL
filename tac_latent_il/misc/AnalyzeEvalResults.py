@@ -6,6 +6,9 @@ import yaml
 
 
 def policy_display_name(raw_policy_name: str, variant: str | None):
+    if raw_policy_name == "DiffusionPolicy":
+        return f"DP ({variant})"
+
     # DiffusionPolicyX -> X
     name = raw_policy_name.removeprefix("DiffusionPolicy")
     if name == "Sparsh" and variant is not None:
@@ -72,8 +75,21 @@ def main():
             if not isinstance(policy_dict, dict):
                 continue
 
-            # Sparsh: split by encoder variants
-            if raw_policy.endswith("Sparsh"):
+            if raw_policy == "DiffusionPolicy":
+                # Bare DiffusionPolicy: camera / tactile
+                for variant in ("camera", "tactile"):
+                    if variant not in policy_dict or not isinstance(
+                        policy_dict[variant], dict
+                    ):
+                        continue
+                    disp = policy_display_name(raw_policy, variant)
+                    success_list = policy_dict[variant].get("success", []) or []
+                    for s in success_list:
+                        r = parse_success_rate(str(s), success_chars)
+                        if r is not None:
+                            groups[disp].append(r)
+            elif raw_policy.endswith("Sparsh"):
+                # Sparsh: split by encoder variants
                 for enc, enc_dict in policy_dict.items():
                     if not isinstance(enc_dict, dict):
                         continue
@@ -84,7 +100,7 @@ def main():
                         if r is not None:
                             groups[disp].append(r)
             else:
-                # Non-sparsh: MUST have "default" and use only that
+                # Others: MUST have "default"
                 if "default" not in policy_dict or not isinstance(
                     policy_dict["default"], dict
                 ):
