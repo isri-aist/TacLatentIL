@@ -164,14 +164,14 @@ def main():
         ]
         print("  ".join(parts))
 
-    # Save yaml only when --out is provided
+    # Save yaml
     if args.out is not None:
         out_path = Path(args.out).expanduser().resolve()
         with open(out_path, "w") as f:
             yaml.safe_dump(agg_rows, f, sort_keys=False)
         print(f"Save {out_path}")
 
-    # Plot (mean ± std)
+    # Plot
     import matplotlib.pyplot as plt
     import numpy as np
 
@@ -183,12 +183,18 @@ def main():
 
     x = np.arange(len(policies))
     plt.figure(figsize=(0.6 * len(policies) + 2, 4))
-    plt.bar(x, means, yerr=stds, capsize=4)
+    plt.bar(x, means, yerr=stds, capsize=4, color="#FF6A00")
     plt.xticks(x, policies, rotation=45, ha="right")
-    plt.ylabel("success rate (mean ± std)")
-    plt.title("Rollout success rate")
+    plt.ylabel("Success rate (mean ± std)")
+    plt.title(f"{task_keys[0]}")
     plt.ylim(0.0, 1.0)
     plt.tight_layout()
+
+    if args.out:
+        png_path = out_path.with_suffix(".png")
+        plt.savefig(png_path, dpi=150)
+        print(f"Save {png_path}")
+
     plt.show()
 
 

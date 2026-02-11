@@ -213,9 +213,9 @@ def main():
         ]
         print("  ".join(parts))
 
-    # Save
+    # Save yaml
     if args.out:
-        out_path = args.out
+        out_path = Path(args.out).expanduser().resolve()
         with open(out_path, "w") as f:
             yaml.safe_dump(
                 [
@@ -247,9 +247,15 @@ def main():
     plt.figure(figsize=(0.6 * len(policies) + 2, 4))
     plt.bar(x, means, yerr=stds, capsize=4)
     plt.xticks(x, policies, rotation=45, ha="right")
-    plt.ylabel("mean InfoNCE loss")
-    plt.title("Tactile metric (mean ± std)")
+    plt.ylabel("InfoNCE loss (mean ± std)")
+    plt.title(f"{root.name}")
     plt.tight_layout()
+
+    if args.out:
+        png_path = out_path.with_suffix(".png")
+        plt.savefig(png_path, dpi=150)
+        print(f"Save {png_path}")
+
     plt.show()
 
 

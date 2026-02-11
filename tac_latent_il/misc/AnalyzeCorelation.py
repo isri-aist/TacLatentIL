@@ -121,17 +121,21 @@ def _bootstrap_ci(
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--in_dir", type=str, default=None)
+    ap.add_argument("--out_dir", type=str, default=None)
+    ap.add_argument("--task_name", type=str, default=None)
+
     ap.add_argument(
         "--metric_yaml",
-        required=True,
+        required=False,
         help="tactile_metric_aggregated.yaml from AnalyzeTactileMetric.py",
     )
     ap.add_argument(
         "--success_yaml",
-        required=True,
+        required=False,
         help="aggregated success yaml from AnalyzeRolloutSuccess.py",
     )
-    ap.add_argument("--out_dir", default="corr_out", help="output directory")
+
     ap.add_argument("--bootstrap", type=int, default=5000, help="num bootstrap samples")
     ap.add_argument("--seed", type=int, default=0, help="bootstrap RNG seed")
     ap.add_argument(
@@ -139,9 +143,30 @@ def main():
     )
     args = ap.parse_args()
 
-    metric_path = Path(args.metric_yaml).expanduser().resolve()
-    success_path = Path(args.success_yaml).expanduser().resolve()
-    out_dir = Path(args.out_dir).expanduser().resolve()
+    if (args.in_dir is None) ^ (args.task_name is None):
+        raise ValueError("--in_dir and --task_name must be specified together.")
+    elif args.in_dir is not None and args.out_dir is None:
+        raise ValueError("--out_dir must be specified when using --in_dir/--task_name.")
+
+    if args.task_name is not None:
+        in_dir = Path(args.in_dir).expanduser().resolve()
+        out_dir = Path(args.out_dir).expanduser().resolve() / args.task_name
+        metric_path = in_dir / f"Metric-{args.task_name}.yaml"
+        success_path = in_dir / f"Success-{args.task_name}.yaml"
+        out_yaml = out_dir / f"Corr-{args.task_name}.yaml"
+        out_png = out_dir / f"Corr-{args.task_name}.png"
+        args.title = args.task_name
+    else:
+        if args.metric_yaml is None or args.success_yaml is None:
+            raise ValueError(
+                "Either specify --in_dir/--out_dir/--task_name, or specify --metric_yaml and --success_yaml."
+            )
+        metric_path = Path(args.metric_yaml).expanduser().resolve()
+        success_path = Path(args.success_yaml).expanduser().resolve()
+        out_dir = Path(args.out_dir or "corr_out").expanduser().resolve()
+        out_yaml = out_dir / "Corr.yaml"
+        out_png = out_dir / "Cor.png"
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
     metric_rows = _load_yaml_list(metric_path)
@@ -223,7 +248,6 @@ def main():
     )
 
     # save yaml
-    out_yaml = out_dir / "correlation_summary.yaml"
     with open(out_yaml, "w") as f:
         yaml.safe_dump(
             {
@@ -271,12 +295,12 @@ def main():
     plt.ylim(0.0, 1.0)
     plt.tight_layout()
 
-    out_png = out_dir / "metric_vs_success.png"
     plt.savefig(out_png, dpi=200)
     print(f"Saved: {out_png}")
-    # out_pdf = out_dir / "metric_vs_success.pdf"
-    # plt.savefig(out_pdf)
-    # print(f"Saved: {out_pdf}")
+
+    plt.savefig(out_png, dpi=200)
+    print(f"Saved: {out_png}")
+
     plt.show()
 
 
