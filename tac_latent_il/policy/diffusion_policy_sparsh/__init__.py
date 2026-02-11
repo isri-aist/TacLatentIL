@@ -3,3 +3,4 @@ from .DiffusionPolicySparshDataset import DiffusionPolicySparshDataset
 from .TrainDiffusionPolicySparsh import TrainDiffusionPolicySparsh
 from .RolloutDiffusionPolicySparsh import RolloutDiffusionPolicySparsh
 from .TrainTactileMetricSparsh import TrainTactileMetricSparsh
+from .EvalDiffusionPolicySparsh import EvalDiffusionPolicySparsh
