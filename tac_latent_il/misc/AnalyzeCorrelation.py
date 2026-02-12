@@ -1,5 +1,4 @@
 import argparse
-import math
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -126,19 +125,12 @@ def main():
 
         # ---- print ----
         print(f"\n=== Metric: {key} ===")
-        for p in policies:
-            print(
-                f"- {p}: "
-                f"{mean_key}={eval_by_policy[p][mean_key]:.4f}±{math.sqrt(eval_by_policy[p][var_key]):.4f}, "
-                f"success={success_by_policy[p]['mean_success_rate']:.3f}"
-            )
-
-        print(f"  Pearson r = {corrs['pearson_r']:.4f} (p={corrs['pearson_p']:.3g})")
+        print(f"Pearson r = {corrs['pearson_r']:.4f} (p={corrs['pearson_p']:.3g})")
         print(
-            f"  Spearman rho = {corrs['spearman_rho']:.4f} (p={corrs['spearman_p']:.3g})"
+            f"Spearman rho = {corrs['spearman_rho']:.4f} (p={corrs['spearman_p']:.3g})"
         )
         print(
-            f"  Kendall tau-b = {corrs['kendall_tau_b']:.4f} (p={corrs['kendall_p']:.3g})"
+            f"Kendall tau-b = {corrs['kendall_tau_b']:.4f} (p={corrs['kendall_p']:.3g})"
         )
 
         # ---- plot ----
@@ -169,7 +161,7 @@ def main():
         out_png = out_dir / f"Corr-{key}.png"
         plt.savefig(out_png, dpi=200)
         plt.close()
-        print(f"Saved: {out_png}")
+        print(f"\nSaved: {out_png}")
 
 
 if __name__ == "__main__":
