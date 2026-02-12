@@ -5,6 +5,7 @@ import sys
 from abc import ABC, abstractmethod
 
 import torch
+import yaml
 from diffusion_policy.common.pytorch_util import dict_apply
 from robo_manip_baselines.common import find_rmb_files, remove_prefix
 from torch.utils.data import DataLoader
@@ -63,6 +64,13 @@ class EvalDiffusionPolicyTactileBase(ABC):
         )
         parser.add_argument(
             "--collect_latent", action=argparse.BooleanOptionalAction, default=True
+        )
+
+        parser.add_argument(
+            "--out",
+            type=str,
+            default=None,
+            help="output yaml file",
         )
 
         if argv is None:
@@ -219,7 +227,15 @@ class EvalDiffusionPolicyTactileBase(ABC):
                 self.step_grad(data)
 
         out = self.finalize_accumulators()
-        print(out)
+
+        # Save yaml
+        if self.args.out is not None:
+            with open(self.args.out, "w") as f:
+                yaml.safe_dump(out, f, sort_keys=False)
+
+            print(f"[{self.__class__.__name__}] Save {self.args.out}")
+
+        return out
 
     def reset_accumulators(self):
         self.sum_act_err = 0.0
