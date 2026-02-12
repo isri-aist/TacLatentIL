@@ -230,6 +230,7 @@ class EvalDiffusionPolicyTactileBase(ABC):
 
         # Save yaml
         if self.args.out is not None:
+            os.makedirs(os.path.dirname(self.args.out), exist_ok=True)
             with open(self.args.out, "w") as f:
                 yaml.safe_dump(out, f, sort_keys=False)
 
