@@ -16,6 +16,7 @@ class EvalDiffusionPolicyTactileBase(ABC):
     PolicyClass = None  # must be overridden
     DatasetClass = None  # must be overridden
 
+    @property
     def policy_name(self):
         return remove_prefix(self.__class__.__name__, "Eval")
 
