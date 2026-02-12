@@ -208,6 +208,8 @@ class EvalDiffusionPolicyTactileBase(ABC):
         self.reset_accumulators()
 
         for data in tqdm(self.dataloader):
+            self._latest_tactile_feat.clear()
+
             data = dict_apply(data, lambda x: x.cuda())
 
             if self.args.compute_act_err or self.args.collect_latent:
@@ -228,6 +230,8 @@ class EvalDiffusionPolicyTactileBase(ABC):
 
         self.latent_list = []
 
+        self.action_norm_list = []
+
     def step_nograd(self, data):
         with torch.no_grad():
             out = self.policy.predict_action(data["obs"])
@@ -245,6 +249,9 @@ class EvalDiffusionPolicyTactileBase(ABC):
                 z = self.extract_latent(data)  # [B, D] or None
                 if z is not None:
                     self.latent_list.append(z.detach().cpu())
+
+                a = act_gt.reshape(act_gt.shape[0], -1)  # [B, T*Da]
+                self.action_norm_list.append(a.norm(dim=1).cpu())  # [B]
 
     def extract_latent(self, data):
         feats = list(self._latest_tactile_feat.values())
@@ -283,4 +290,43 @@ class EvalDiffusionPolicyTactileBase(ABC):
         return out
 
     def compute_latent_metrics(self, latent):
-        return {"lat_var": float(latent.var(dim=0).mean())}
+        out = {}
+
+        # -----------------
+        # LatStd
+        # -----------------
+        out["lat_std"] = float(latent.std(dim=0).mean())
+
+        # -----------------
+        # LatRank (effective rank via SVD)
+        # -----------------
+        X = latent - latent.mean(dim=0, keepdim=True)  # [N, D]
+        s = torch.linalg.svdvals(X)  # [min(N, D)]
+        total = s.sum()
+        if float(total) > 0.0:
+            p = (s / total).clamp_min(1e-12)
+            entropy = -(p * p.log()).sum()
+            out["lat_rank"] = float(entropy.exp())
+        else:
+            out["lat_rank"] = 0.0
+
+        # -----------------
+        # ActMod (action-conditioned modulation)
+        # -----------------
+        a = torch.cat(self.action_norm_list, dim=0)  # [N]
+        qs = torch.quantile(a, torch.tensor([0.25, 0.5, 0.75], device=a.device))
+        bins = torch.bucketize(a, qs)  # 0..3
+        bin_stats = []
+        for b in range(4):
+            idx = (bins == b).nonzero(as_tuple=True)[0]
+            if idx.numel() < 30:
+                continue
+            bin_stats.append(latent[idx].std(dim=0).mean())
+
+        if len(bin_stats) > 0:
+            overall_stats = latent.std(dim=0).mean().clamp_min(1e-12)
+            out["act_mod"] = float(torch.stack(bin_stats).mean() / overall_stats)
+        else:
+            out["act_mod"] = 0.0
+
+        return out
