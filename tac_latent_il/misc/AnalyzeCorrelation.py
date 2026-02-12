@@ -84,6 +84,15 @@ def main():
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    all_results = {
+        "task_name": args.task_name,
+        "inputs": {
+            "eval_yaml": str(eval_path),
+            "success_yaml": str(success_path),
+        },
+        "metrics": {},
+    }
+
     # ---- load ----
     eval_rows = _load_yaml_list(eval_path)
     success_rows = _load_yaml_list(success_path)
@@ -122,6 +131,12 @@ def main():
         )
 
         corrs = _corrs(x, y)
+
+        all_results["metrics"][key] = {
+            "n_policies": int(len(policies)),
+            "policies": policies,
+            "corr": corrs,
+        }
 
         # ---- print ----
         print(f"\n=== Metric: {key} ===")
@@ -162,6 +177,16 @@ def main():
         plt.savefig(out_png, dpi=200)
         plt.close()
         print(f"\nSaved: {out_png}")
+
+    # ---- save ----
+    if args.task_name is None:
+        out_yaml = out_dir / "Corr.yaml"
+    else:
+        out_yaml = out_dir / f"Corr-{args.task_name}.yaml"
+
+    with open(out_yaml, "w") as f:
+        yaml.safe_dump(all_results, f, sort_keys=False)
+    print(f"\nSaved: {out_yaml}")
 
 
 if __name__ == "__main__":
