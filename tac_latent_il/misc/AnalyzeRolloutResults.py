@@ -16,26 +16,32 @@ def policy_display_name(raw_policy_name: str, variant: str | None):
     return name
 
 
-def parse_success_rate(success_str: str, success_chars: set[str]) -> float | None:
+def parse_success_rate(
+    success_str: str, success_chars: set[str], partial_success_chars: set[str]
+) -> float | None:
     """
     - Ignore spaces always.
-    - Success if char in success_chars.
-    - Failure if char != space and not in success_chars.
-    - Return success / (success + failure). If denom == 0, return None.
+    - Success if char in success_chars (counts as 1.0 point).
+    - Partial success if char in partial_success_chars (counts as 0.5 point).
+    - Failure if char is neither success nor partial (counts as 0.0 point, but included in denominator).
+    - Return (points) / (num non-space chars). If denom == 0, return None.
     """
-    s = 0
-    f = 0
+    points = 0.0
+    denom = 0
     for ch in success_str:
         if ch == " ":
             continue
+        denom += 1
         if ch in success_chars:
-            s += 1
+            points += 1.0
+        elif ch in partial_success_chars:
+            points += 0.5
         else:
-            f += 1
-    denom = s + f
+            # failure: +0.0
+            pass
     if denom == 0:
         return None
-    return s / denom
+    return points / denom
 
 
 def main():
@@ -46,6 +52,12 @@ def main():
         type=str,
         default="1",
         help="characters treated as success (space is always ignored). default: '1'",
+    )
+    parser.add_argument(
+        "--partial_success_chars",
+        type=str,
+        default="",
+        help="characters treated as partial success (0.5 point; space is always ignored). default: ''",
     )
     parser.add_argument(
         "--out",
@@ -60,6 +72,18 @@ def main():
         data = yaml.safe_load(f) or {}
 
     success_chars = set(args.success_chars)
+    partial_success_chars = set(args.partial_success_chars)
+    print("Args:")
+    print(f"- success_chars: {success_chars}")
+    print(f"- partial_success_chars: {partial_success_chars}\n")
+
+    # Validation: no overlap between success and partial success
+    overlap = success_chars & partial_success_chars
+    if overlap:
+        overlap_str = "".join(sorted(overlap))
+        raise ValueError(
+            f"success_chars and partial_success_chars must not overlap: {overlap_str!r}"
+        )
 
     # Task keys (skip Meta)
     task_keys = [k for k in data.keys() if k != "Meta"]
@@ -85,7 +109,9 @@ def main():
                     disp = policy_display_name(raw_policy, variant)
                     success_list = policy_dict[variant].get("success", []) or []
                     for s in success_list:
-                        r = parse_success_rate(str(s), success_chars)
+                        r = parse_success_rate(
+                            str(s), success_chars, partial_success_chars
+                        )
                         if r is not None:
                             groups[disp].append(r)
             elif raw_policy.endswith("Sparsh"):
@@ -96,7 +122,9 @@ def main():
                     success_list = enc_dict.get("success", []) or []
                     disp = policy_display_name(raw_policy, enc)
                     for s in success_list:
-                        r = parse_success_rate(str(s), success_chars)
+                        r = parse_success_rate(
+                            str(s), success_chars, partial_success_chars
+                        )
                         if r is not None:
                             groups[disp].append(r)
             else:
@@ -110,7 +138,7 @@ def main():
                 disp = policy_display_name(raw_policy, None)
                 success_list = policy_dict["default"].get("success", []) or []
                 for s in success_list:
-                    r = parse_success_rate(str(s), success_chars)
+                    r = parse_success_rate(str(s), success_chars, partial_success_chars)
                     if r is not None:
                         groups[disp].append(r)
 
