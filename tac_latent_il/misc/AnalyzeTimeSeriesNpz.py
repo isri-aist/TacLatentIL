@@ -23,18 +23,26 @@ def _window_indices(T: int, t: int, W: int):
     return t0, t1
 
 
-def _compute_series_per_episode(z: np.ndarray, grad: np.ndarray, W: int):
-    # z: [T, D], grad: [T]
-    Tz, _ = z.shape
+def _compute_series_per_episode(
+    z: np.ndarray,  # [T, D]
+    grad_feat: np.ndarray,  # [T, D]
+    sigma: np.ndarray,  # [D] (global)
+    W: int,
+):
+    Tz, D = z.shape
 
-    dz = np.linalg.norm(z[1:] - z[:-1], axis=1).astype(np.float32)  # [T-1]
-    dz = np.concatenate([np.array([0.0], dtype=np.float32), dz], axis=0)  # [T]
+    grad_sens = np.linalg.norm(grad_feat, axis=-1).astype(np.float32)  # [T]
 
-    grad = grad.astype(np.float32)
+    grad_znorm_feat = grad_feat * sigma[None, :]
+    grad_sens_znorm = np.linalg.norm(grad_znorm_feat, axis=-1).astype(np.float32)
+
+    dz = np.linalg.norm(z[1:] - z[:-1], axis=1).astype(np.float32)
+    dz = np.concatenate([np.array([0.0], dtype=np.float32), dz], axis=0)
 
     lat_std_w = np.zeros((Tz,), dtype=np.float32)
     lat_rank_w = np.zeros((Tz,), dtype=np.float32)
     grad_w = np.zeros((Tz,), dtype=np.float32)
+    grad_znorm_w = np.zeros((Tz,), dtype=np.float32)
     dz_w = np.zeros((Tz,), dtype=np.float32)
 
     for t in range(Tz):
@@ -42,16 +50,19 @@ def _compute_series_per_episode(z: np.ndarray, grad: np.ndarray, W: int):
         zw = z[t0:t1]
         lat_std_w[t] = float(np.mean(np.std(zw, axis=0)))
         lat_rank_w[t] = float(_effective_rank(zw))
-        grad_w[t] = float(np.mean(grad[t0:t1]))
+        grad_w[t] = float(np.mean(grad_sens[t0:t1]))
+        grad_znorm_w[t] = float(np.mean(grad_sens_znorm[t0:t1]))
         dz_w[t] = float(np.mean(dz[t0:t1]))
 
     return {
-        "dz_norm": dz,
-        "dz_norm_w": dz_w,
-        "grad_sens": grad,
+        "grad_sens": grad_sens,
         "grad_sens_w": grad_w,
+        "grad_sens_znorm": grad_sens_znorm,
+        "grad_sens_znorm_w": grad_znorm_w,
         "lat_std_w": lat_std_w,
         "lat_rank_w": lat_rank_w,
+        "dz_norm": dz,
+        "dz_norm_w": dz_w,
     }
 
 
@@ -124,7 +135,7 @@ def main():
     ap.add_argument("in_npz", type=str)
     ap.add_argument("--out_dir", type=str, required=True)
     ap.add_argument("--bins", type=int, default=30)
-    ap.add_argument("--window", type=int, default=5)
+    ap.add_argument("--window", type=int, default=10)
     args = ap.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -134,17 +145,21 @@ def main():
     task_cond = np.asarray(npz["task_cond"], dtype=object)
     t_norm_list = list(npz["t_norm"])
     z_list = list(npz["z"])
-    grad_list = list(npz["grad_sens"])
+    grad_feat_list = list(npz["grad_feat"])
 
-    # compute per-episode time series (no interpolation)
+    z_all = np.concatenate(z_list, axis=0)  # [T_all, D]
+    sigma = z_all.std(axis=0)
+    sigma = np.maximum(sigma, 1e-8)
+
     series_by_ep = []
-    for z, g in zip(z_list, grad_list):
-        series_by_ep.append(_compute_series_per_episode(z, g, args.window))
+    for z, gfeat in zip(z_list, grad_feat_list):
+        series_by_ep.append(_compute_series_per_episode(z, gfeat, sigma, args.window))
 
-    # all metrics (fixed set)
     metrics = [
         "grad_sens",
         "grad_sens_w",
+        "grad_sens_znorm",
+        "grad_sens_znorm_w",
         "lat_std_w",
         "lat_rank_w",
         "dz_norm",
@@ -164,17 +179,13 @@ def main():
     for m in metrics:
         x_list = [s[m] for s in series_by_ep]
         agg = _bin_aggregate(x_list, t_norm_list, args.bins)
-        _plot_band(
-            agg,
-            title=m,
-            out_png=os.path.join(args.out_dir, f"{m}.png"),
-        )
+        _plot_band(agg, title=m, out_png=os.path.join(args.out_dir, f"{m}.png"))
         out_yaml["metrics"][m] = {
             "scalar": _scalar_summary(x_list),
             "bin_n_min": int(np.nanmin(agg["n"])) if np.any(agg["n"] > 0) else 0,
         }
 
-    # task_cond overlay plot for each metric
+    # by task_cond
     uniq_tc = sorted(set([int(x) for x in task_cond if x is not None]))
     for tc in uniq_tc:
         idx = [i for i in range(len(task_cond)) if int(task_cond[i]) == tc]
@@ -211,7 +222,7 @@ def main():
     out_path = os.path.join(args.out_dir, "summary.yaml")
     with open(out_path, "w") as f:
         yaml.safe_dump(out_yaml, f, sort_keys=False)
-    print(f"[AnalyzeTimeSeriesNPZ] Save {args.out_dir}")
+    print(f"[AnalyzeTimeSeriesNpz] Save {args.out_dir}")
 
 
 if __name__ == "__main__":

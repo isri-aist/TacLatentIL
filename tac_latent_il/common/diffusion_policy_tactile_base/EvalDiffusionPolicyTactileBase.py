@@ -205,7 +205,7 @@ class EvalDiffusionPolicyTactileBase(ABC):
         )
 
         z_list = []
-        grad_list = []
+        grad_feat_list = []
         act_gt_list = []
         act_pred_list = []
 
@@ -231,9 +231,9 @@ class EvalDiffusionPolicyTactileBase(ABC):
             z = self.extract_latent().detach().cpu()
             z_list.append(z)
 
-            # grad_sens
-            grad = self.extract_grad_sensitivity().detach().cpu()
-            grad_list.append(grad)
+            # grad_feat
+            grad_feat = self.extract_grad_feature().detach().cpu()
+            grad_feat_list.append(grad_feat)
 
             # action gt / pred
             n_obs = self.model_meta_info["data"]["n_obs_steps"]
@@ -244,7 +244,7 @@ class EvalDiffusionPolicyTactileBase(ABC):
             act_pred_list.append(act_pred.detach().cpu())
 
         z = torch.cat(z_list, dim=0).numpy()
-        grad_sens = torch.cat(grad_list, dim=0).numpy()
+        grad_feat = torch.cat(grad_feat_list, dim=0).numpy()
         act_gt = torch.cat(act_gt_list, dim=0).numpy()
         act_pred = torch.cat(act_pred_list, dim=0).numpy()
 
@@ -256,7 +256,7 @@ class EvalDiffusionPolicyTactileBase(ABC):
             task_cond=task_cond,
             t_norm=t_norm,
             z=z,
-            grad_sens=grad_sens,
+            grad_feat=grad_feat,
             action_gt=act_gt,
             action_pred=act_pred,
         )
@@ -269,14 +269,13 @@ class EvalDiffusionPolicyTactileBase(ABC):
             )
         return torch.cat(feats, dim=-1)
 
-    def extract_grad_sensitivity(self):
+    def extract_grad_feature(self):
         feats = list(self._latest_tactile_feat.values())
         if feats[0].grad is None:
             raise ValueError(
                 f"[{self.__class__.__name__}] Gradient of tactile features disabled."
             )
-        grad = torch.cat([f.grad for f in feats], dim=-1)
-        return grad.norm(dim=-1)
+        return torch.cat([f.grad for f in feats], dim=-1)
 
     def save_npz(self, episodes):
         os.makedirs(os.path.dirname(self.args.out), exist_ok=True)
@@ -290,7 +289,7 @@ class EvalDiffusionPolicyTactileBase(ABC):
             task_cond=np.array([e["task_cond"] for e in episodes], dtype=np.int64),
             t_norm=_obj_list("t_norm"),
             z=_obj_list("z"),
-            grad_sens=_obj_list("grad_sens"),
+            grad_feat=_obj_list("grad_feat"),
             action_gt=_obj_list("action_gt"),
             action_pred=_obj_list("action_pred"),
         )
