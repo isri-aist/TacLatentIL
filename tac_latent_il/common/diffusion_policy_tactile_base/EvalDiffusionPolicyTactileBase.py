@@ -58,16 +58,6 @@ class EvalDiffusionPolicyTactileBase(ABC):
         )
 
         parser.add_argument(
-            "--compute_act_err", action=argparse.BooleanOptionalAction, default=True
-        )
-        parser.add_argument(
-            "--compute_grad_sens", action=argparse.BooleanOptionalAction, default=True
-        )
-        parser.add_argument(
-            "--collect_latent", action=argparse.BooleanOptionalAction, default=True
-        )
-
-        parser.add_argument(
             "--out",
             type=str,
             default=None,
@@ -216,25 +206,24 @@ class EvalDiffusionPolicyTactileBase(ABC):
     def run(self):
         self.reset_accumulators()
 
-        for data in tqdm(self.dataloader):
+        for data in tqdm(self.dataloader, desc="Pass1 (no_grad)"):
             self._latest_tactile_feat.clear()
-
             data = dict_apply(data, lambda x: x.cuda())
+            self.step_nograd(data)
 
-            if self.args.compute_act_err or self.args.collect_latent:
-                self.step_nograd(data)
+        self.grad_znorm_sigma = self.compute_grad_znorm_sigma()
 
-            if self.args.compute_grad_sens:
-                self.step_grad(data)
+        for data in tqdm(self.dataloader, desc="Pass2 (grad)"):
+            self._latest_tactile_feat.clear()
+            data = dict_apply(data, lambda x: x.cuda())
+            self.step_grad(data)
 
         out = self.finalize_accumulators()
 
-        # Save yaml
         if self.args.out is not None:
             os.makedirs(os.path.dirname(self.args.out), exist_ok=True)
             with open(self.args.out, "w") as f:
                 yaml.safe_dump(out, f, sort_keys=False)
-
             print(f"[{self.__class__.__name__}] Save {self.args.out}")
 
         return out
@@ -246,8 +235,10 @@ class EvalDiffusionPolicyTactileBase(ABC):
         self.sum_grad_sens = 0.0
         self.count_grad_sens = 0
 
-        self.latent_list = []
+        self.sum_grad_sens_znorm = 0.0
+        self.count_grad_sens_znorm = 0
 
+        self.latent_list = []
         self.action_norm_list = []
 
     def step_nograd(self, data):
@@ -255,69 +246,95 @@ class EvalDiffusionPolicyTactileBase(ABC):
             out = self.policy.predict_action(data["obs"])
             act_pred = out["action"]  # [B, n_action_steps, Da]
 
-            if self.args.compute_act_err:
-                n_obs = self.model_meta_info["data"]["n_obs_steps"]
-                n_act = act_pred.shape[1]
-                act_gt = data["action"][:, n_obs - 1 : n_obs - 1 + n_act]
-                act_err = torch.norm(act_pred - act_gt, dim=-1).mean(dim=1)  # [B]
-                self.sum_act_err += float(act_err.sum().cpu())
-                self.count_act_err += int(act_err.numel())
+            n_obs = self.model_meta_info["data"]["n_obs_steps"]
+            n_act = act_pred.shape[1]
+            act_gt = data["action"][:, n_obs - 1 : n_obs - 1 + n_act]
 
-            if self.args.collect_latent:
-                z = self.extract_latent(data)  # [B, D] or None
-                if z is not None:
-                    self.latent_list.append(z.detach().cpu())
+            act_err = torch.norm(act_pred - act_gt, dim=-1).mean(dim=1)  # [B]
+            self.sum_act_err += float(act_err.sum().cpu())
+            self.count_act_err += int(act_err.numel())
 
-                a = act_gt.reshape(act_gt.shape[0], -1)  # [B, T*Da]
-                self.action_norm_list.append(a.norm(dim=1).cpu())  # [B]
+            z = self.extract_latent(data)  # [B, D]
+            self.latent_list.append(z.detach().cpu())
+
+            a = act_gt.reshape(act_gt.shape[0], -1)  # [B, T*Da]
+            self.action_norm_list.append(a.norm(dim=1).cpu())  # [B]
 
     def extract_latent(self, data):
         feats = list(self._latest_tactile_feat.values())
-        if len(feats) == 0:
-            return None
+        if len(feats) != len(self.model_meta_info["tactile"]["tactile_names"]):
+            raise ValueError(
+                f"[{self.__class__.__name__}] Invalid number of tactile features extracted: {len(feats)}"
+            )
         z = torch.cat(feats, dim=-1)
         return z
+
+    def compute_grad_znorm_sigma(self):
+        if len(self.latent_list) == 0:
+            raise ValueError(
+                f"[{self.__class__.__name__}] No latent vectors collected."
+            )
+        latent = torch.cat(self.latent_list, dim=0)  # [N, D]
+        sigma = latent.std(dim=0)
+        sigma = sigma.clamp_min(1e-6)
+        return sigma.cuda()
 
     def step_grad(self, data):
         self.policy.zero_grad(set_to_none=True)
         loss = self.policy.compute_loss(data)
         loss.backward()
 
-        grad_sens = self.extract_grad_sensitivity()
-        if grad_sens is not None:
-            self.sum_grad_sens += float(grad_sens)
-            self.count_grad_sens += 1
+        grad_sens, grad_sens_znorm = self.extract_grad_sensitivity()
+
+        self.sum_grad_sens += float(grad_sens)
+        self.count_grad_sens += 1
+
+        self.sum_grad_sens_znorm += float(grad_sens_znorm)
+        self.count_grad_sens_znorm += 1
 
     def extract_grad_sensitivity(self):
         feats = list(self._latest_tactile_feat.values())
-        if len(feats) == 0 or feats[0].grad is None:
-            return None
-        grad = torch.cat([f.grad for f in feats], dim=-1)
-        return grad.norm(dim=-1).mean().item()
+        if len(feats) != len(self.model_meta_info["tactile"]["tactile_names"]):
+            raise ValueError(
+                f"[{self.__class__.__name__}] Invalid number of tactile features extracted: {len(feats)}"
+            )
+        elif feats[0].grad is None:
+            raise ValueError(
+                f"[{self.__class__.__name__}] Gradient of tactile features disabled."
+            )
+
+        grad = torch.cat([f.grad for f in feats], dim=-1)  # [B, D]
+        grad_sens = grad.norm(dim=-1).mean().item()
+
+        grad_znorm = grad * self.grad_znorm_sigma
+        grad_sens_znorm = grad_znorm.norm(dim=-1).mean().item()
+
+        return grad_sens, grad_sens_znorm
 
     def finalize_accumulators(self):
         out = {}
         if self.count_act_err > 0:
             out["act_err"] = self.sum_act_err / self.count_act_err
+
         if self.count_grad_sens > 0:
             out["grad_sens"] = self.sum_grad_sens / self.count_grad_sens
+
+        if self.count_grad_sens_znorm > 0:
+            out["grad_sens_znorm"] = (
+                self.sum_grad_sens_znorm / self.count_grad_sens_znorm
+            )
 
         if len(self.latent_list) > 0:
             latent = torch.cat(self.latent_list, dim=0)  # [N, D]
             out.update(self.compute_latent_metrics(latent))
+
         return out
 
     def compute_latent_metrics(self, latent):
         out = {}
 
-        # -----------------
-        # LatStd
-        # -----------------
         out["lat_std"] = float(latent.std(dim=0).mean())
 
-        # -----------------
-        # LatRank (effective rank via SVD)
-        # -----------------
         X = latent - latent.mean(dim=0, keepdim=True)  # [N, D]
         s = torch.linalg.svdvals(X)  # [min(N, D)]
         total = s.sum()
@@ -328,9 +345,6 @@ class EvalDiffusionPolicyTactileBase(ABC):
         else:
             out["lat_rank"] = 0.0
 
-        # -----------------
-        # ActMod (action-conditioned modulation)
-        # -----------------
         a = torch.cat(self.action_norm_list, dim=0)  # [N]
         qs = torch.quantile(a, torch.tensor([0.25, 0.5, 0.75], device=a.device))
         bins = torch.bucketize(a, qs)  # 0..3
