@@ -79,56 +79,35 @@ def _compute_series_per_episode(
     Ns = int(action_pred.shape[1])
     _ = Ns  # silence lint if needed
 
-    # action error (RMSE), averaged over Ns samples
     err = action_pred - action_gt[:, None, :, :]
     rmse = np.sqrt(np.mean(err**2, axis=(2, 3)))  # [T, Ns]
     action_err = rmse.mean(axis=1).astype(np.float32)  # [T]
 
-    # action variance across Ns samples
     action_var = action_pred.var(axis=1).mean(axis=(1, 2)).astype(np.float32)  # [T]
 
-    # grad sensitivity across Ns samples
     grad = np.linalg.norm(grad_feat, axis=-1)  # [T, Ns]
-    grad_mean = grad.mean(axis=1).astype(np.float32)  # [T]
-    grad_var = grad.var(axis=1).astype(np.float32)  # [T]
+    grad_raw = grad.mean(axis=1).astype(np.float32)  # [T]
 
-    # grad sensitivity with z-normalization (sigma weighting)
     grad_znorm = np.linalg.norm(grad_feat * sigma[None, None, :], axis=-1)  # [T, Ns]
-    grad_znorm_mean = grad_znorm.mean(axis=1).astype(np.float32)  # [T]
-    grad_znorm_var = grad_znorm.var(axis=1).astype(np.float32)  # [T]
+    grad_norm = grad_znorm.mean(axis=1).astype(np.float32)  # [T]
 
-    # latent dynamics
-    dz = np.linalg.norm(z[1:] - z[:-1], axis=1)
-    dz = np.concatenate([[0.0], dz]).astype(np.float32)
+    dz_raw = np.linalg.norm(z[1:] - z[:-1], axis=1)
+    dz_raw = np.concatenate([[0.0], dz_raw]).astype(np.float32)
 
-    # windowed
+    dz_norm = np.linalg.norm((z[1:] - z[:-1]) / sigma[None, :], axis=1)
+    dz_norm = np.concatenate([[0.0], dz_norm]).astype(np.float32)
+
     lat_std_w, lat_rank_w = _compute_lat_windowed(z, W)
-
-    dz_w = _compute_windowed_mean(dz, W)
-    action_err_w = _compute_windowed_mean(action_err, W)
-    action_var_w = _compute_windowed_mean(action_var, W)
-    grad_mean_w = _compute_windowed_mean(grad_mean, W)
-    grad_var_w = _compute_windowed_mean(grad_var, W)
-    grad_znorm_mean_w = _compute_windowed_mean(grad_znorm_mean, W)
-    grad_znorm_var_w = _compute_windowed_mean(grad_znorm_var, W)
 
     return {
         "action_err": action_err,
-        "action_err_w": action_err_w,
         "action_var": action_var,
-        "action_var_w": action_var_w,
-        "grad_mean": grad_mean,
-        "grad_mean_w": grad_mean_w,
-        "grad_var": grad_var,
-        "grad_var_w": grad_var_w,
-        "grad_znorm_mean": grad_znorm_mean,
-        "grad_znorm_mean_w": grad_znorm_mean_w,
-        "grad_znorm_var": grad_znorm_var,
-        "grad_znorm_var_w": grad_znorm_var_w,
+        "grad_raw": grad_raw,
+        "grad_norm": grad_norm,
         "lat_std_w": lat_std_w,
         "lat_rank_w": lat_rank_w,
-        "dz": dz,
-        "dz_w": dz_w,
+        "dz_raw": dz_raw,
+        "dz_norm": dz_norm,
     }
 
 
@@ -202,7 +181,7 @@ def main():
     )
     ap.add_argument("--out_dir", type=str, required=True)
     ap.add_argument("--bins", type=int, default=30)
-    ap.add_argument("--window", type=int, default=4)
+    ap.add_argument("--window", type=int, default=2)
     args = ap.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -248,21 +227,13 @@ def main():
 
     metrics = [
         "action_err",
-        "action_err_w",
         "action_var",
-        "action_var_w",
-        "grad_mean",
-        "grad_mean_w",
-        "grad_var",
-        "grad_var_w",
-        "grad_znorm_mean",
-        "grad_znorm_mean_w",
-        "grad_znorm_var",
-        "grad_znorm_var_w",
+        "grad_raw",
+        "grad_norm",
         "lat_std_w",
         "lat_rank_w",
-        "dz",
-        "dz_w",
+        "dz_raw",
+        "dz_norm",
     ]
 
     out_yaml = {
