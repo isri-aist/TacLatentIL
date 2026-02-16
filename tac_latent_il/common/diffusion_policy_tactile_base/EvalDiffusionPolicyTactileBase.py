@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from diffusion_policy.common.pytorch_util import dict_apply
 from robo_manip_baselines.common import RmbData, find_rmb_files, remove_prefix
 from torch.utils.data import DataLoader
@@ -48,7 +49,14 @@ class EvalDiffusionPolicyTactileBase(ABC):
             help="Whether to enable data caching in RmbData. This uses RAM heavily, so it should be disabled on computers with small RAM.",
         )
 
-        parser.add_argument("--batch_size", type=int, default=32, help="batch size")
+        parser.add_argument("--batch_size", type=int, default=16, help="batch size")
+
+        parser.add_argument(
+            "--num_action_samples",
+            type=int,
+            default=8,
+            help="number of stochastic action samples per obs",
+        )
 
         parser.add_argument(
             "--out",
@@ -204,52 +212,69 @@ class EvalDiffusionPolicyTactileBase(ABC):
             num_workers=0,
         )
 
+        Ns = int(self.args.num_action_samples)
+        To = int(self.model_meta_info["data"]["n_obs_steps"])
+        Ta = int(self.model_meta_info["data"]["n_action_steps"])
+
         z_list = []
         grad_feat_list = []
         act_gt_list = []
         act_pred_list = []
 
+        def _repeat0(x, n):
+            return x.repeat((n,) + (1,) * (x.ndim - 1))
+
         for data in dataloader:
             data = dict_apply(data, lambda x: x.cuda())
 
-            # forward action
+            # action gt
+            act_gt = data["action"][:, To - 1 : To - 1 + Ta]  # (B, Ta, Da)
+
+            # repeat for stochastic sampling in a single forward
+            obs_rep = dict_apply(
+                data["obs"], lambda x: _repeat0(x, Ns)
+            )  # (Ns*B, To, ...)
+            act_gt_rep = _repeat0(act_gt, Ns)  # (Ns*B, Ta, Da)
+
+            # forward
             self.policy.zero_grad(set_to_none=True)
             self._latest_tactile_feat.clear()
+            out = self.policy.predict_action(obs_rep)
+            act_pred_rep = out["action"]  # (Ns*B, Ta, Da)
 
-            with torch.no_grad():
-                out = self.policy.predict_action(data["obs"])
-                act_pred = out["action"]  # [B, n_action_steps, Da]
+            # backward
+            score = F.mse_loss(act_pred_rep, act_gt_rep)
+            score.backward()
 
-            # forward loss
-            self.policy.zero_grad(set_to_none=True)
-            self._latest_tactile_feat.clear()
+            # extract latent z / grad_feat
+            z_rep = self.extract_latent().detach().cpu()  # (Ns*B, Dz)
+            grad_feat_rep = self.extract_grad_feature().detach().cpu()  # (Ns*B, Dz)
 
-            loss = self.policy.compute_loss(data)
-            loss.backward()
+            # reshape to (Ns, B, ...)
+            B = int(act_gt.shape[0])
+            Da = int(act_gt.shape[2])
+            z_rep = z_rep.reshape(Ns, B, -1)
+            grad_feat_rep = grad_feat_rep.reshape(Ns, B, -1)
+            act_pred_rep = act_pred_rep.detach().cpu().reshape(Ns, B, Ta, Da)
 
-            # latent
-            z = self.extract_latent().detach().cpu()
-            z_list.append(z)
+            # save
+            z_list.append(z_rep[0])  # (B, Dz)
+            grad_feat_list.append(grad_feat_rep.permute(1, 0, 2))  # (B, Ns, Dz)
+            act_gt_list.append(act_gt.detach().cpu())  # (B, Ta, Da)
+            act_pred_list.append(act_pred_rep.permute(1, 0, 2, 3))  # (B, Ns, Ta, Da)
 
-            # grad_feat
-            grad_feat = self.extract_grad_feature().detach().cpu()
-            grad_feat_list.append(grad_feat)
+        z = torch.cat(z_list, dim=0).numpy()  # (T, Dz)
+        grad_feat = torch.cat(grad_feat_list, dim=0).numpy()  # (T, Ns, Dz)
+        act_gt = torch.cat(act_gt_list, dim=0).numpy()  # (T, Ta, Da)
+        act_pred = torch.cat(act_pred_list, dim=0).numpy()  # (T, Ns, Ta, Da)
 
-            # action gt / pred
-            n_obs = self.model_meta_info["data"]["n_obs_steps"]
-            n_act = act_pred.shape[1]
-            act_gt = data["action"][:, n_obs - 1 : n_obs - 1 + n_act]
-
-            act_gt_list.append(act_gt.detach().cpu())
-            act_pred_list.append(act_pred.detach().cpu())
-
-        z = torch.cat(z_list, dim=0).numpy()
-        grad_feat = torch.cat(grad_feat_list, dim=0).numpy()
-        act_gt = torch.cat(act_gt_list, dim=0).numpy()
-        act_pred = torch.cat(act_pred_list, dim=0).numpy()
-
-        T = z.shape[0]
+        T = len(dataset)
         t_norm = np.arange(T, dtype=np.float32) / max(T - 1, 1)
+
+        assert len(z) == T
+        assert len(grad_feat) == T
+        assert len(act_gt) == T
+        assert len(act_pred) == T
 
         return dict(
             episode_id=episode_id,
@@ -262,20 +287,56 @@ class EvalDiffusionPolicyTactileBase(ABC):
         )
 
     def extract_latent(self):
-        feats = list(self._latest_tactile_feat.values())
-        if len(feats) != len(self.model_meta_info["tactile"]["tactile_names"]):
+        tactile_names = self.model_meta_info["tactile"]["tactile_names"]
+
+        feats = []
+        for tactile_name in tactile_names:
+            f = self._latest_tactile_feat.get(tactile_name, None)
+            if f is None:
+                raise ValueError(
+                    f"[{self.__class__.__name__}] Missing tactile feature: {tactile_name}"
+                )
+            feats.append(f)  # (B*To, D)
+
+        feat = torch.cat(feats, dim=1)  # (B*To, K*D)
+
+        To = int(self.model_meta_info["data"]["n_obs_steps"])
+        if feat.shape[0] % To != 0:
             raise ValueError(
-                f"[{self.__class__.__name__}] Invalid number of tactile features extracted: {len(feats)}"
+                f"[{self.__class__.__name__}] Invalid feat length: {feat.shape[0]} not divisible by To={To}"
             )
-        return torch.cat(feats, dim=-1)
+        B = feat.shape[0] // To
+        feat = feat.reshape(B, To, -1)  # (B, To, K*D)
+
+        return feat.reshape(B, -1)  # (B, To*(K*D))
 
     def extract_grad_feature(self):
-        feats = list(self._latest_tactile_feat.values())
-        if feats[0].grad is None:
+        tactile_names = self.model_meta_info["tactile"]["tactile_names"]
+
+        grads = []
+        for tactile_name in tactile_names:
+            f = self._latest_tactile_feat.get(tactile_name, None)
+            if f is None:
+                raise ValueError(
+                    f"[{self.__class__.__name__}] Missing tactile feature: {tactile_name}"
+                )
+            if f.grad is None:
+                raise ValueError(
+                    f"[{self.__class__.__name__}] Gradient of tactile features disabled."
+                )
+            grads.append(f.grad)  # (B*To, D)
+
+        grad = torch.cat(grads, dim=1)  # (B*To, K*D)
+
+        To = int(self.model_meta_info["data"]["n_obs_steps"])
+        if grad.shape[0] % To != 0:
             raise ValueError(
-                f"[{self.__class__.__name__}] Gradient of tactile features disabled."
+                f"[{self.__class__.__name__}] Invalid grad length: {grad.shape[0]} not divisible by To={To}"
             )
-        return torch.cat([f.grad for f in feats], dim=-1)
+        B = grad.shape[0] // To
+        grad = grad.reshape(B, To, -1)  # (B, To, K*D)
+
+        return grad.reshape(B, -1)  # (B, To*(K*D))
 
     def save_npz(self, episodes):
         os.makedirs(os.path.dirname(self.args.out), exist_ok=True)
