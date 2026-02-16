@@ -1,9 +1,24 @@
 import argparse
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
+
+
+def _collect_npz_paths(path_str: str):
+    p = Path(path_str)
+    if p.is_file():
+        if p.suffix != ".npz":
+            raise ValueError(f"Input file is not .npz: {p}")
+        return [p]
+    if p.is_dir():
+        paths = sorted(p.rglob("*.npz"))
+        if not paths:
+            raise ValueError(f"No .npz found under directory: {p}")
+        return paths
+    raise ValueError(f"Invalid input path: {p}")
 
 
 def _effective_rank(X: np.ndarray) -> float:
@@ -182,7 +197,9 @@ def _plot_taskcond_overlaid(taskcond_to_agg, title, out_png):
 
 def main():
     ap = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    ap.add_argument("in_npz", type=str)
+    ap.add_argument(
+        "in_npz", type=str, help="npz file or directory containing npz files"
+    )
     ap.add_argument("--out_dir", type=str, required=True)
     ap.add_argument("--bins", type=int, default=30)
     ap.add_argument("--window", type=int, default=4)
@@ -190,15 +207,29 @@ def main():
 
     os.makedirs(args.out_dir, exist_ok=True)
 
-    npz = np.load(args.in_npz, allow_pickle=True)
-    episode_id = np.asarray(npz["episode_id"])
-    task_cond = np.asarray(npz["task_cond"], dtype=int)
+    npz_paths = _collect_npz_paths(args.in_npz)
+    print(f"[AnalyzeTimeSeriesNpz] Load {len(npz_paths)} npz files")
 
-    t_norm_list = list(npz["t_norm"])
-    z_list = list(npz["z"])
-    action_gt_list = list(npz["action_gt"])
-    action_pred_list = list(npz["action_pred"])
-    grad_feat_list = list(npz["grad_feat"])
+    episode_id_list = []
+    task_cond_list = []
+    t_norm_list = []
+    z_list = []
+    action_gt_list = []
+    action_pred_list = []
+    grad_feat_list = []
+
+    for p in npz_paths:
+        npz = np.load(p, allow_pickle=True)
+        episode_id_list.extend(list(npz["episode_id"]))
+        task_cond_list.extend(list(npz["task_cond"]))
+        t_norm_list.extend(list(npz["t_norm"]))
+        z_list.extend(list(npz["z"]))
+        action_gt_list.extend(list(npz["action_gt"]))
+        action_pred_list.extend(list(npz["action_pred"]))
+        grad_feat_list.extend(list(npz["grad_feat"]))
+
+    episode_id = np.asarray(episode_id_list)
+    task_cond = np.asarray(task_cond_list, dtype=int)
 
     # global sigma for z-normalized grad
     z_all = np.concatenate(
@@ -236,6 +267,7 @@ def main():
 
     out_yaml = {
         "in_npz": args.in_npz,
+        "num_npz": int(len(npz_paths)),
         "bins": int(args.bins),
         "window": int(args.window),
         "num_episodes": int(len(episode_id)),
