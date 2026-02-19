@@ -84,6 +84,13 @@ class EvalDiffusionPolicyTactileBase(ABC):
             self.model_meta_info["policy"]["backbone"] = "cnn"
         if "scheduler" not in self.model_meta_info["policy"]:
             self.model_meta_info["policy"]["scheduler"] = "ddpm"
+        if (
+            "load_checkpoint"
+            not in self.model_meta_info["policy"]["args"]["tactile_kwargs"]
+        ):
+            self.model_meta_info["policy"]["args"]["tactile_kwargs"][
+                "load_checkpoint"
+            ] = True
 
         # Print policy information
         state_dim = len(self.model_meta_info["state"]["example"])
@@ -103,7 +110,7 @@ class EvalDiffusionPolicyTactileBase(ABC):
             f"  - use ema: {self.model_meta_info['policy']['use_ema']}, backbone: {self.model_meta_info['policy']['backbone']}, scheduler: {self.model_meta_info['policy']['scheduler']}\n"
             f"  - horizon: {self.model_meta_info['data']['horizon']}, obs steps: {self.model_meta_info['data']['n_obs_steps']}, action steps: {self.model_meta_info['data']['n_action_steps']}\n"
             f"  - image size: {self.model_meta_info['data']['image_size']}, image crop size: {self.model_meta_info['data']['image_crop_size']}\n"
-            f"  - tactile names: {self.model_meta_info['tactile']['tactile_names']}, tactile fine-tune: {self.model_meta_info['policy']['args']['tactile_kwargs']['enable_finetune']}"
+            f"  - tactile names: {self.model_meta_info['tactile']['tactile_names']}, tactile fine-tune: {self.model_meta_info['policy']['args']['tactile_kwargs']['enable_finetune']}, tactile pre-train: {self.model_meta_info['policy']['args']['tactile_kwargs']['load_checkpoint']}"
         )
         self.print_policy_info_for_tactile()
 

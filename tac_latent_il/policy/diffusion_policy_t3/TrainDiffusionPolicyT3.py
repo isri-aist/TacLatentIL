@@ -24,4 +24,5 @@ class TrainDiffusionPolicyT3(TrainDiffusionPolicyTactileBase):
         return {
             "pooling_type": self.args.t3_pooling_type,
             "enable_finetune": self.args.enable_tactile_finetune,
+            "load_checkpoint": self.args.load_tactile_checkpoint,
         }

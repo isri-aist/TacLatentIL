@@ -24,4 +24,5 @@ class TrainDiffusionPolicySparsh(TrainDiffusionPolicyTactileBase):
         return {
             "encoder_type": self.args.sparsh_encoder_type,
             "enable_finetune": self.args.enable_tactile_finetune,
+            "load_checkpoint": self.args.load_tactile_checkpoint,
         }

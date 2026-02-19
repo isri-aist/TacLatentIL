@@ -57,4 +57,5 @@ class TrainDiffusionPolicyAnyTouch(TrainDiffusionPolicyTactileBase):
             "use_same_patchemb": self.args.use_same_patchemb,
             "pooling_method": self.args.tactile_pooling,
             "enable_finetune": self.args.enable_tactile_finetune,
+            "load_checkpoint": self.args.load_tactile_checkpoint,
         }

@@ -17,4 +17,5 @@ class TrainDiffusionPolicyUniT(TrainDiffusionPolicyTactileBase):
     def get_tactile_kwargs(self):
         return {
             "enable_finetune": self.args.enable_tactile_finetune,
+            "load_checkpoint": self.args.load_tactile_checkpoint,
         }
