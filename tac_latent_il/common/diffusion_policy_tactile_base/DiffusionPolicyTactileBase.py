@@ -8,7 +8,6 @@ import robomimic.utils.obs_utils as ObsUtils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from einops import reduce
 from robomimic.algo import algo_factory
 from robomimic.algo.algo import PolicyAlgo
@@ -28,7 +27,7 @@ class DiffusionPolicyTactileBase(BaseImagePolicy, ABC):
     def __init__(
         self,
         shape_meta: dict,
-        noise_scheduler: DDPMScheduler,
+        noise_scheduler,
         horizon,
         n_action_steps,
         n_obs_steps,
