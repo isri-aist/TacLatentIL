@@ -29,6 +29,30 @@ $ cd third_party/sparsh
 $ pip install -e .
 ```
 
+> [!NOTE]
+> If you encounter the following error,
+> ```console
+> File ".../lib/python3.12/site-packages/xformers/ops/fmha/dispatch.py", line 83, in _run_priority_list
+>     raise NotImplementedError(msg)
+> NotImplementedError: No operator found for `memory_efficient_attention_forward` with inputs:
+>      query       : shape=(32, 197, 12, 64) (torch.float32)
+>      key         : shape=(32, 197, 12, 64) (torch.float32)
+>      value       : shape=(32, 197, 12, 64) (torch.float32)
+>      attn_bias   : <class 'NoneType'>
+>      p           : 0.0
+> `fa3F@0.0.0` is not supported because:
+>     requires device with capability <= (9, 0) but your GPU has capability (12, 0) (too new)
+>     dtype=torch.float32 (supported: {torch.float16, torch.bfloat16})
+> `fa2F@2.5.7-pt` is not supported because:
+>     dtype=torch.float32 (supported: {torch.float16, torch.bfloat16})
+> `cutlassF-pt` is not supported because:
+>     requires device with capability <= (9, 0) but your GPU has capability (12, 0) (too new)
+> ```
+> uninstall `xformers` by the following command.
+> ```console
+> $ pip uninstall -y xformers
+> ```
+
 ## Download (required only for training)
 Download the Sparsh pretrained models:
 ```console
