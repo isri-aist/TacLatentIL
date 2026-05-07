@@ -44,6 +44,9 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
             else:  # if self.args.backbone == "transformer"
                 self.args.horizon = 10
 
+        if self.args.mid_train_checkpoint is not None:
+            self.args.load_tactile_checkpoint = False
+
     def set_additional_args(self, parser):
         parser.set_defaults(enable_rmb_cache=True)
 
@@ -130,6 +133,12 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
             default=True,
             help="whether to load pre-trained tactile checkpoint",
         )
+        parser.add_argument(
+            "--mid_train_checkpoint",
+            type=str,
+            default=None,
+            help="mid-trained tactile encoder checkpoint",
+        )
 
         self.set_additional_args_for_tactile(parser)
 
@@ -146,6 +155,9 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
         self.model_meta_info["policy"]["use_ema"] = self.args.use_ema
         self.model_meta_info["policy"]["backbone"] = self.args.backbone
         self.model_meta_info["policy"]["scheduler"] = self.args.scheduler
+        self.model_meta_info["policy"]["mid_train_checkpoint"] = (
+            self.args.mid_train_checkpoint
+        )
 
         self.model_meta_info["tactile"] = {
             "tactile_names": self.args.tactile_names,
@@ -257,6 +269,8 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
             noise_scheduler=noise_scheduler,
             **self.model_meta_info["policy"]["args"],
         )
+        if self.args.mid_train_checkpoint is not None:
+            self.load_mid_trained_tactile_encoder()
 
         # Construct exponential moving average (EMA)
         if self.args.use_ema:
@@ -305,7 +319,22 @@ class TrainDiffusionPolicyTactileBase(TrainBase, ABC):
             f"  - image size: {self.args.image_size}, image crop size: {self.args.image_crop_size}\n"
             f"  - tactile names: {self.args.tactile_names}, tactile fine-tune: {self.args.enable_tactile_finetune}, tactile pre-train: {self.args.load_tactile_checkpoint}"
         )
+        if self.args.mid_train_checkpoint is not None:
+            print(f"  - mid-train checkpoint: {self.args.mid_train_checkpoint}")
         self.print_policy_info_for_tactile()
+
+    def load_mid_trained_tactile_encoder(self):
+        checkpoint_path = os.path.normpath(self.args.mid_train_checkpoint)
+        print(
+            f"[{self.__class__.__name__}] Load mid-trained tactile encoder checkpoint: {checkpoint_path}"
+        )
+        state_dict = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
+        if not isinstance(state_dict, dict):
+            raise ValueError(
+                f"[{self.__class__.__name__}] Invalid mid-train checkpoint: {checkpoint_path}"
+            )
+
+        self.policy.tactile_model.load_state_dict(state_dict, strict=True)
 
     def load_ckpt(self):
         super().load_ckpt()

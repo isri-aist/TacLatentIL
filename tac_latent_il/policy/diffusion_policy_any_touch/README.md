@@ -34,6 +34,14 @@ $ cd tac_latent_il/checkpoint/AnyTouch
 $ gdown https://drive.google.com/uc?id=1L4jGUjIHNBMzOiD33Rv0jxWYKHBORD1R
 ```
 
+## Mid-training
+Run tactile mid-training:
+```console
+# Go to the top directory of this repository
+$ cd tac_latent_il
+$ python ./bin/MidTrain.py DiffusionPolicyAnyTouch TactileDynamicsInfoNCE --dataset_dir ./dataset/<dataset_name> --checkpoint_dir ./checkpoint/MidTrain/DiffusionPolicyAnyTouch/<checkpoint_name>
+```
+
 ## Model training
 Train a model:
 ```console

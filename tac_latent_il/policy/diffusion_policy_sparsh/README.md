@@ -64,6 +64,14 @@ $ wget -O dinov2_vitbase.ckpt https://huggingface.co/facebook/sparsh-dinov2-base
 $ wget -O ijepa_vitbase.ckpt https://huggingface.co/facebook/sparsh-ijepa-base/resolve/main/ijepa_vitbase.ckpt?download=true
 ```
 
+## Mid-training
+Run tactile mid-training:
+```console
+# Go to the top directory of this repository
+$ cd tac_latent_il
+$ python ./bin/MidTrain.py DiffusionPolicySparsh TactileDynamicsInfoNCE --dataset_dir ./dataset/<dataset_name> --checkpoint_dir ./checkpoint/MidTrain/DiffusionPolicySparsh/<checkpoint_name>
+```
+
 ## Model training
 Train a model:
 ```console

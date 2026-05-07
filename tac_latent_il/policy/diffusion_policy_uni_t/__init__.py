@@ -2,4 +2,4 @@ from .DiffusionPolicyUniT import DiffusionPolicyUniT
 from .DiffusionPolicyUniTDataset import DiffusionPolicyUniTDataset
 from .TrainDiffusionPolicyUniT import TrainDiffusionPolicyUniT
 from .RolloutDiffusionPolicyUniT import RolloutDiffusionPolicyUniT
-from .TrainTactileMetricUniT import TrainTactileMetricUniT
+from .MidTrainUniT import MidTrainUniT

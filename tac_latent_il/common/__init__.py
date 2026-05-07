@@ -10,8 +10,8 @@ from .diffusion_policy_tactile_base.TrainDiffusionPolicyTactileBase import (
 from .diffusion_policy_tactile_base.RolloutDiffusionPolicyTactileBase import (
     RolloutDiffusionPolicyTactileBase,
 )
-from .diffusion_policy_tactile_base.TrainTactileMetricBase import (
-    TactileEncoderBase,
-    TactileMetricBase,
-    TrainTactileMetricBase,
+from .mid_train_base import (
+    MidTrainModelBase,
+    MidTrainTactileMixin,
+    PolicyTactileEncoderBase,
 )

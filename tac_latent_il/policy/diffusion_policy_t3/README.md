@@ -38,6 +38,14 @@ $ wget -O mini.pth https://huggingface.co/datasets/alanz-mit/FoundationTactile/r
 $ wget -O trunk.pth https://huggingface.co/datasets/alanz-mit/FoundationTactile/resolve/main/models/t3_tiny/trunk.pth?download=true
 ```
 
+## Mid-training
+Run tactile mid-training:
+```console
+# Go to the top directory of this repository
+$ cd tac_latent_il
+$ python ./bin/MidTrain.py DiffusionPolicyT3 TactileDynamicsInfoNCE --dataset_dir ./dataset/<dataset_name> --checkpoint_dir ./checkpoint/MidTrain/DiffusionPolicyT3/<checkpoint_name>
+```
+
 ## Model training
 Train a model:
 ```console

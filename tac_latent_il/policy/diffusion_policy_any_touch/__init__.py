@@ -2,4 +2,4 @@ from .DiffusionPolicyAnyTouch import DiffusionPolicyAnyTouch
 from .DiffusionPolicyAnyTouchDataset import DiffusionPolicyAnyTouchDataset
 from .TrainDiffusionPolicyAnyTouch import TrainDiffusionPolicyAnyTouch
 from .RolloutDiffusionPolicyAnyTouch import RolloutDiffusionPolicyAnyTouch
-from .TrainTactileMetricAnyTouch import TrainTactileMetricAnyTouch
+from .MidTrainAnyTouch import MidTrainAnyTouch
