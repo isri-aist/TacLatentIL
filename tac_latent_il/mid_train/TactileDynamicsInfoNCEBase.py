@@ -1,9 +1,15 @@
 import argparse
 import copy
+import os
+import sys
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+sys.path.append(
+    os.path.join(os.path.dirname(__file__), "../../third_party/diffusion_policy")
+)
 from diffusion_policy.model.diffusion.ema_model import EMAModel
 
 from tac_latent_il.common.mid_train_base import MidTrainModelBase
