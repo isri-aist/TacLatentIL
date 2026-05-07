@@ -25,9 +25,6 @@ class MidTrainTactileMixin:
             ]
         )
         parser.set_defaults(camera_names=[])
-        parser.set_defaults(train_ratio=0.8)
-        parser.set_defaults(batch_size=16)
-        parser.set_defaults(num_epochs=100)
         parser.set_defaults(lr=1e-4)
 
         parser.add_argument("--tactile_feature_dim", type=int, default=64)
