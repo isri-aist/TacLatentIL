@@ -3,4 +3,3 @@ from .DiffusionPolicyT3Dataset import DiffusionPolicyT3Dataset
 from .TrainDiffusionPolicyT3 import TrainDiffusionPolicyT3
 from .RolloutDiffusionPolicyT3 import RolloutDiffusionPolicyT3
 from .TrainTactileMetricT3 import TrainTactileMetricT3
-from .EvalDiffusionPolicyT3 import EvalDiffusionPolicyT3

@@ -15,6 +15,3 @@ from .diffusion_policy_tactile_base.TrainTactileMetricBase import (
     TactileMetricBase,
     TrainTactileMetricBase,
 )
-from .diffusion_policy_tactile_base.EvalDiffusionPolicyTactileBase import (
-    EvalDiffusionPolicyTactileBase,
-)
