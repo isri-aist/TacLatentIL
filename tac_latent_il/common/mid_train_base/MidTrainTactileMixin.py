@@ -52,13 +52,9 @@ class MidTrainTactileMixin:
         # Construct only mid-training model (no diffusion policy)
         action_dim = len(self.model_meta_info["action"]["example"])
 
-        mid_train_model_args = self.MidTrainModelClass.get_additional_model_args(
-            self.args
-        )
-
         self.model_meta_info["policy"]["args"] = dict(
             action_dim=action_dim,
-            **mid_train_model_args,
+            **self.model_meta_info["policy"]["mid_train_model_args"],
         )
 
         self.tactile_encoder = self.TactileEncoderClass(
