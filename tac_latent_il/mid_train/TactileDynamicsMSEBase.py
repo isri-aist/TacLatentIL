@@ -5,12 +5,6 @@ from .TactileDynamicsBase import TactileDynamicsBase
 
 
 class TactileDynamicsMSEBase(TactileDynamicsBase):
-    def get_model_info(self):
-        return (
-            f"  - mid-train model: {self.__class__.__name__}\n"
-            f"  - teacher ema: {self.use_teacher_ema}"
-        )
-
     def forward_batch(self, batch):
         obs = batch["obs"]
         action = batch["action"]  # (B, T, Da)
@@ -37,7 +31,9 @@ class TactileDynamicsMSEBase(TactileDynamicsBase):
             z_curr = self.encoder.forward_one(k, x_curr)
 
             # f([z_{t-1}, z_t, a_t]) -> z_{t+1}
-            z_hat_next = self.dynamics_head(torch.cat([z_prev, z_curr, a_curr], dim=-1))
+            z_hat_next = self.dynamics_head(
+                self.build_dynamics_input(z_prev, z_curr, a_curr)
+            )
 
             with torch.no_grad():
                 if self.use_teacher_ema:

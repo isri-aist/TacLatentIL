@@ -22,12 +22,14 @@ class TactileDynamicsInfoNCEBase(TactileDynamicsBase):
         action_dim,
         tactile_encoder,
         use_teacher_ema=True,
+        use_action=True,
         temperature=0.1,
     ):
         super().__init__(
             action_dim=action_dim,
             tactile_encoder=tactile_encoder,
             use_teacher_ema=use_teacher_ema,
+            use_action=use_action,
         )
         self.temperature = temperature
 
@@ -45,10 +47,7 @@ class TactileDynamicsInfoNCEBase(TactileDynamicsBase):
         )
 
     def get_model_info(self):
-        return (
-            f"  - mid-train model: {self.__class__.__name__}\n"
-            f"  - teacher ema: {self.use_teacher_ema}, temperature: {self.temperature}"
-        )
+        return f"{super().get_model_info()}\n  - temperature: {self.temperature}"
 
     @torch.no_grad()
     def enqueue(self, k):
@@ -117,7 +116,9 @@ class TactileDynamicsInfoNCEBase(TactileDynamicsBase):
             z_curr = self.encoder.forward_one(k, x_curr)
 
             # f([z_{t-1}, z_t, a_t]) -> z_{t+1}
-            z_hat_next = self.dynamics_head(torch.cat([z_prev, z_curr, a_curr], dim=-1))
+            z_hat_next = self.dynamics_head(
+                self.build_dynamics_input(z_prev, z_curr, a_curr)
+            )
 
             with torch.no_grad():
                 if self.use_teacher_ema:
