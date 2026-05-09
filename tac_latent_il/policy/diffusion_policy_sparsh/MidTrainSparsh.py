@@ -2,10 +2,9 @@ from tac_latent_il.common import (
     MidTrainTactileMixin,
     PolicyTactileEncoderBase,
 )
-from tac_latent_il.policy.diffusion_policy_sparsh import (
-    DiffusionPolicySparsh,
-    TrainDiffusionPolicySparsh,
-)
+
+from .DiffusionPolicySparsh import DiffusionPolicySparsh
+from .TrainDiffusionPolicySparsh import TrainDiffusionPolicySparsh
 
 
 class TactileEncoderSparsh(PolicyTactileEncoderBase):

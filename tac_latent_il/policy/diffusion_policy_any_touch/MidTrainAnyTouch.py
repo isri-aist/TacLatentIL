@@ -2,10 +2,9 @@ from tac_latent_il.common import (
     MidTrainTactileMixin,
     PolicyTactileEncoderBase,
 )
-from tac_latent_il.policy.diffusion_policy_any_touch import (
-    DiffusionPolicyAnyTouch,
-    TrainDiffusionPolicyAnyTouch,
-)
+
+from .DiffusionPolicyAnyTouch import DiffusionPolicyAnyTouch
+from .TrainDiffusionPolicyAnyTouch import TrainDiffusionPolicyAnyTouch
 
 
 class TactileEncoderAnyTouch(PolicyTactileEncoderBase):
