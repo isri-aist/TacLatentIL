@@ -133,18 +133,38 @@ class MidTrainTactileMixin:
                     data = dict_apply(data, lambda x: x.cuda())
                     loss_dict = self.policy.forward_batch(data)
                     batch_result_list.append(self.detach_batch_result(loss_dict))
-                self.log_epoch_summary(batch_result_list, "val", epoch)
+                epoch_summary = self.log_epoch_summary(batch_result_list, "val", epoch)
+                self.update_best_ckpt(epoch_summary, policy=self.policy)
 
             # if epoch % max(self.args.num_epochs // 10, 1) == 0:
             #     self.save_current_ckpt(f"epoch{epoch:0>4}", policy=self.policy)
 
         self.save_current_ckpt("last", policy=self.policy)
+        self.save_best_ckpt()
 
     def get_mid_trained_tactile_encoder_state_dict(self, policy=None):
         if policy is None:
             policy = self.policy
         return policy.encoder.get_tactile_encoder_state_dict()
 
+    def update_best_ckpt(self, epoch_summary, policy=None):
+        if policy is None:
+            policy = self.policy
+
+        if epoch_summary["loss"] < self.best_ckpt_info["loss"]:
+            self.best_ckpt_info = {
+                "epoch": epoch_summary["epoch"],
+                "loss": epoch_summary["loss"],
+                "state_dict": self.get_mid_trained_tactile_encoder_state_dict(policy),
+            }
+
     def save_current_ckpt(self, ckpt_suffix, policy=None):
         ckpt_path = f"{self.args.checkpoint_dir}/tactile_encoder_{ckpt_suffix}.ckpt"
         torch.save(self.get_mid_trained_tactile_encoder_state_dict(policy), ckpt_path)
+
+    def save_best_ckpt(self):
+        ckpt_path = f"{self.args.checkpoint_dir}/tactile_encoder_best.ckpt"
+        torch.save(self.best_ckpt_info["state_dict"], ckpt_path)
+        print(
+            f"[{self.__class__.__name__}] Best val loss is {self.best_ckpt_info['loss']:.3f} at epoch {self.best_ckpt_info['epoch']}"
+        )
