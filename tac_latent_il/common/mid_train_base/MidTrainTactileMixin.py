@@ -28,6 +28,12 @@ class MidTrainTactileMixin:
         parser.set_defaults(lr=1e-4)
 
         parser.add_argument("--tactile_feature_dim", type=int, default=64)
+        parser.add_argument(
+            "--encoder_lr_scale",
+            type=float,
+            default=0.1,
+            help="learning-rate scale for the tactile encoder relative to --lr",
+        )
         self.MidTrainModelClass.set_additional_args(parser)
 
     def setup_model_meta_info(self):
@@ -39,6 +45,7 @@ class MidTrainTactileMixin:
         self.model_meta_info["policy"]["mid_train_model_args"] = (
             self.MidTrainModelClass.get_additional_model_args(self.args)
         )
+        self.model_meta_info["policy"]["encoder_lr_scale"] = self.args.encoder_lr_scale
         self.model_meta_info["policy"]["tactile_encoder"] = (
             self.TactileEncoderClass.__name__
         )
@@ -78,7 +85,10 @@ class MidTrainTactileMixin:
 
         self.optimizer = torch.optim.AdamW(
             [
-                {"params": encoder_params, "lr": 0.1 * self.args.lr},
+                {
+                    "params": encoder_params,
+                    "lr": self.args.encoder_lr_scale * self.args.lr,
+                },
                 {"params": head_params, "lr": self.args.lr},
             ],
             weight_decay=self.args.weight_decay,
@@ -99,7 +109,8 @@ class MidTrainTactileMixin:
         self.print_policy_info()
         print(
             f"  - horizon: {self.args.horizon}, obs steps: {self.args.n_obs_steps}, action steps: {self.args.n_action_steps}\n"
-            f"  - tactile names: {self.args.tactile_names}, tactile fine-tune: {self.args.enable_tactile_finetune}"
+            f"  - tactile names: {self.args.tactile_names}, tactile fine-tune: {self.args.enable_tactile_finetune}\n"
+            f"  - lr: {self.args.lr}, encoder lr scale: {self.args.encoder_lr_scale}"
         )
         model_info = self.policy.get_model_info()
         if model_info:
