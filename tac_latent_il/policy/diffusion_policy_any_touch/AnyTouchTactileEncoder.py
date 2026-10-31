@@ -1,3 +1,6 @@
+# Modified from AnyTouch and Transformers CLIP for tactile encoding.
+# Copyright and license notices: see THIRD_PARTY_NOTICES.txt.
+
 from typing import Optional, Tuple, Union
 
 import torch

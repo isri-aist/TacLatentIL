@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "tac_latent_il"
 description = "Tactile-based generative policies for imitation learning"
 readme = "README.md"
+license = {file = "LICENSE"}
 authors = [
   {name = "Masaki Murooka", email = "m-murooka@aist.go.jp"},
 ]
@@ -43,6 +44,9 @@ unit = [
   "wandb",
   "gdown",
 ]
+
+[tool.setuptools]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.txt"]
 
 [tool.setuptools.packages.find]
 include = ["tac_latent_il", "tac_latent_il.*"]
